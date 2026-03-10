@@ -1,0 +1,40 @@
+extends layout
+
+block content
+  .host-dashboard
+    // Top Section: Currently Answering Player (Question Board)
+    .question-board-container
+      h2 Question Board
+      .question-display
+        h3#current-question (Questions) [cite: 101]
+      .answer-pad
+        ul#current-options
+          li.option (Answer Pad/Options) [cite: 102]
+      p.answering-status Answering by: 
+        span#active-player-name username [cite: 103]
+
+    // Bottom/Side Section: Leaderboard
+    .leaderboard-container
+      h2 Players Ranking [cite: 90]
+      table.ranking-table
+        thead
+          tr
+            th Rank
+            th Username
+            th Score
+        tbody#ranking-body
+          // Dynamic rows will go here
+          tr
+            td 1
+            td WeeGamer
+            td 1520
+      
+      .game-log-container
+        h3 Game Log [cite: 93]
+        ul#game-log
+          li WeeGamer drew an Enemy Card!
+          li WeeGamer answered correctly (+20 pts).
+
+      button.btn.btn-danger#end-game-btn End Game [cite: 104]
+
+  script(src="/js/host.js")

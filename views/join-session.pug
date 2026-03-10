@@ -1,0 +1,17 @@
+extends layout
+
+block content
+  .join-container(style="text-align: center; max-width: 400px; width: 100%;")
+    h2 Join Session
+    form#join-form(style="margin-top: 2rem;")
+      .form-group
+        label(for="lobby-code") Enter Code
+        // Limits input to the 6 characters we generate for lobby codes
+        input(type="text" id="lobby-code" name="lobbyCode" placeholder="e.g. 123456" required maxlength="6" autocomplete="off")
+      
+      button.btn.btn-primary(type="submit" style="margin-bottom: 1rem;") Join
+      
+      p(style="margin: 1rem 0; color: #7f8c8d;") OR
+      
+      // Placeholder for future QR scanning functionality
+      button.btn.btn-secondary(type="button" id="scan-qr-btn") Scan QR Code

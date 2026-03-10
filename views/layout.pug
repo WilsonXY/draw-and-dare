@@ -1,0 +1,43 @@
+doctype html
+html(lang="en")
+  head
+    meta(charset="UTF-8")
+    meta(name="viewport" content="width=device-width, initial-scale=1.0")
+    title Draw & Dare
+    link(rel="stylesheet", href="/css/style.css")
+    script(src="https://code.jquery.com/jquery-3.6.0.min.js") 
+  body
+    // Hamburger Menu Sidebar
+    if user
+      #sidebar.sidebar
+        .sidebar-header
+          h3 #{user.username}
+          p Account Details
+        ul.sidebar-nav
+          li: a(href="#", id="change-pwd-btn") Change Password
+          li: a(href="/logout") Logout
+      
+      // Top Navigation
+      header.top-nav
+        button#menu-toggle.menu-icon ☰
+        h1.logo Draw & Dare
+        .user-info #{user.username}
+    else
+      // Simple header for logged out users
+      header.top-nav.centered
+        h1.logo Draw & Dare
+
+    // Main Content Wrapper
+    main.container
+      block content
+
+    // Change Password Modal (Hidden by default)
+    #password-modal.modal.hidden
+      .modal-content
+        h2 Change Password
+        input(type="password" placeholder="New Password" id="new-password")
+        button.btn.btn-primary#apply-pwd Apply
+        button.btn.btn-secondary#close-modal Cancel
+
+    script(src="/js/main.js")
+    script(src="/js/auth.js")
