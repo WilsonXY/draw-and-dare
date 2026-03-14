@@ -2,26 +2,33 @@ extends layout
 
 block content
   .lobby-container
-    // Left/Top Side: Participants
-    .participants-section
-      h2 Participants
-      ul#participants-list.list-box
-        // Example dynamic rendering
-        each player in players || []
-          li= player.username
-        if (!players || players.length === 0)
-          li Waiting for players...
+    if isHost
+      // Left/Top Side: Participants
+      .participants-section
+        h2 Participants
+        ul#participants-list.list-box
+          // Example dynamic rendering
+          each player in players || []
+            li= player.username
+          if (!players || players.length === 0)
+            li Waiting for players...
 
-    // Right/Bottom Side: Game Info
-    .info-section
-      .code-display
-        h3 Lobby Code
-        .code-box #{lobby_code || '------'}
-      
-      .qr-display
-        h3 QR Code
-        // Placeholder for generated QR
-        .qr-placeholder [ QR Code Here ]
-      
-      if isHost
+      // Right/Bottom Side: Game Info
+      .info-section
+        .code-display
+          h3 Lobby Code
+          .code-box #{lobby_code || '------'}
+        
+        .qr-display
+          h3 QR Code
+          if lobby_code
+            img(src=`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${lobby_code}`, alt="Lobby QR Code")
+          else
+            .qr-placeholder [ QR Code Unavailable ]
+        
         button.btn.btn-start#start-game-btn Start!
+    else
+      .waiting-section(style="text-align: center; margin-top: 3rem;")
+        h2 Waiting for Game Start...
+        p The host will start the game shortly.
+        ul#participants-list(style="display: none;")

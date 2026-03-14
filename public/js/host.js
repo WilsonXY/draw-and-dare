@@ -34,13 +34,17 @@ $(document).ready(function() {
                             
                             // Customize the message based on what happened
                             if (log.card_type === 'Enemy Card') {
-                                if (log.is_correct) {
+                                if (log.power_name === 'Skip Enemy') {
+                                    logMessage += ` Bypassed using power.`;
+                                } else if (log.is_correct) {
                                     logMessage += ` Answered correctly (+${log.points_earned} pts).`;
+                                    if (log.power_name === 'Double Score') logMessage += ' (Double Score applied!)';
                                 } else {
                                     logMessage += ` Answered incorrectly (0 pts).`;
                                 }
                             } else if (log.card_type === 'Empty Card') {
                                 logMessage += ` (+${log.points_earned} pts).`;
+                                if (log.power_name === 'Double Score') logMessage += ' (Double Score applied!)';
                             } else if (log.card_type === 'Power Card' && log.power_name) {
                                 logMessage += ` Gained power: ${log.power_name}.`;
                             }

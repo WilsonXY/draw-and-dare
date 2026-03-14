@@ -1,6 +1,9 @@
 extends layout
 
 block content
+  // Include html5-qrcode for QR scanning
+  script(src="https://unpkg.com/html5-qrcode")
+
   .join-container(style="text-align: center; max-width: 400px; width: 100%;")
     h2 Join Session
     form#join-form(style="margin-top: 2rem;")
@@ -15,3 +18,51 @@ block content
       
       // Placeholder for future QR scanning functionality
       button.btn.btn-secondary(type="button" id="scan-qr-btn") Scan QR Code
+
+    // Container for the QR Scanner
+    #qr-reader-container(style="display: none; margin-top: 2rem;")
+      #reader
+      button.btn.btn-secondary(type="button" id="close-scanner-btn" style="margin-top: 1rem;") Back
+
+  script.
+    $(document).ready(function() {
+      let html5QrcodeScanner;
+
+      $('#scan-qr-btn').on('click', function() {
+        $('#join-form').hide();
+        $('#qr-reader-container').show();
+
+        function onScanSuccess(decodedText, decodedResult) {
+          // Set the lobby code to the scanned result
+          $('#lobby-code').val(decodedText);
+          
+          // Stop the scanner and submit the form
+          html5QrcodeScanner.clear().then(() => {
+            $('#qr-reader-container').hide();
+            $('#join-form').show();
+            $('#join-form').submit(); // Automatically submit the code
+          }).catch(error => {
+            console.error("Failed to clear scanner: ", error);
+          });
+        }
+
+        html5QrcodeScanner = new Html5QrcodeScanner(
+          "reader",
+          { fps: 10, qrbox: { width: 250, height: 250 } },
+          false
+        );
+        
+        html5QrcodeScanner.render(onScanSuccess);
+      });
+
+      $('#close-scanner-btn').on('click', function() {
+        if (html5QrcodeScanner) {
+          html5QrcodeScanner.clear().then(() => {
+            $('#qr-reader-container').hide();
+            $('#join-form').show();
+          }).catch(error => {
+            console.error("Failed to clear scanner: ", error);
+          });
+        }
+      });
+    });

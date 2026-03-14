@@ -42,6 +42,23 @@ app.use((req, res, next) => {
     next();
 });
 
+// 3. Database Connection Pool Setup
+// It's best practice to use a pool rather than a single connection
+const db = mysql.createPool({
+    host: 'localhost',
+    user: 'root', // Replace with your MySQL username
+    password: 'MySQL050530140787.', // Replace with your MySQL password
+    database: 'drawanddare', // Database name
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
+});
+
+// Pass the database pool to requests so routes can use it
+app.use((req, res, next) => {
+    req.db = db;
+    next();
+});
 
 
 // User Authentication API (AJAX endpoints)
@@ -137,22 +154,36 @@ app.get('/logout', (req, res) => {
 });
 
 
-// 3. Database Connection Pool Setup
-// It's best practice to use a pool rather than a single connection
-const db = mysql.createPool({
-    host: 'localhost',
-    user: 'root', // Replace with your MySQL username
-    password: 'MySQL050530140787.', // Replace with your MySQL password
-    database: 'draw_and_dare', // Database name
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0
-});
+// Change Password Route
+app.post('/api/change-password', async (req, res) => {
+    try {
+        if (!req.session.user) {
+            return res.status(401).json({ success: false, message: 'Unauthorized. Please log in.' });
+        }
 
-// Pass the database pool to requests so routes can use it
-app.use((req, res, next) => {
-    req.db = db;
-    next();
+        const { newPassword } = req.body;
+
+        if (!newPassword || newPassword.trim() === '') {
+            return res.status(400).json({ success: false, message: 'New password is required.' });
+        }
+
+        const saltRounds = 5;
+        const passwordHash = await bcrypt.hash(newPassword, saltRounds);
+
+        const [result] = await req.db.execute(
+            'UPDATE Users SET password_hash = ? WHERE user_id = ?',
+            [passwordHash, req.session.user.user_id]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(400).json({ success: false, message: 'Failed to change password. User not found.' });
+        }
+
+        res.status(200).json({ success: true, message: 'Password changed successfully!' });
+    } catch (error) {
+        console.error('Change Password Error:', error);
+        res.status(500).json({ success: false, message: 'Server error during password change.' });
+    }
 });
 
 
@@ -407,6 +438,40 @@ app.post('/api/start-game', async (req, res) => {
     }
 });
 
+// End Game API (AJAX endpoint for the Host)
+app.post('/api/end-game', async (req, res) => {
+    // Ensure the requester is logged in, has an active lobby, and is the host
+    if (!req.session.user || !req.session.currentLobbyId || !req.session.isHost) {
+        return res.status(403).json({ success: false, message: 'Unauthorized. Only the host can end the game.' });
+    }
+
+    try {
+        // Update the lobby status to 'ended'
+        const [result] = await req.db.execute(
+            'UPDATE Lobby SET status = ? WHERE lobby_id = ? AND host_user_id = ?',
+            ['ended', req.session.currentLobbyId, req.session.user.user_id]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(400).json({ success: false, message: 'Could not end the game. Lobby not found or invalid permissions.' });
+        }
+        
+        // Clear the active lobby from the host's session
+        req.session.currentLobbyId = null;
+        req.session.isHost = false;
+
+        res.status(200).json({ 
+            success: true, 
+            message: 'Game ended!', 
+            redirect: '/' 
+        });
+
+    } catch (error) {
+        console.error('End Game Error:', error);
+        res.status(500).json({ success: false, message: 'Server error while ending the game.' });
+    }
+});
+
 // 2. Render the Active Game Views
 app.get('/game', async (req, res) => {
     if (!req.session.user || !req.session.currentLobbyId) {
@@ -461,7 +526,7 @@ app.post('/api/scan-card', async (req, res) => {
 
         // 1. Identify the Player's Participant ID
         const [participants] = await connection.execute(
-            'SELECT participant_id FROM Participants WHERE lobby_id = ? AND user_id = ?',
+            'SELECT participant_id, active_effect_id FROM Participants WHERE lobby_id = ? AND user_id = ?',
             [lobbyId, userId]
         );
 
@@ -470,6 +535,33 @@ app.post('/api/scan-card', async (req, res) => {
             return res.status(403).json({ success: false, message: 'You are not a participant in this game.' });
         }
         const participantId = participants[0].participant_id;
+        let activeEffectId = participants[0].active_effect_id;
+
+        let stolenMessage = '';
+        // Apply Point Steal effect exactly at the start of the next turn
+        if (Number(activeEffectId) === 3) {
+            const [leaderboard] = await connection.execute(
+                'SELECT participant_id, current_score FROM Participants WHERE lobby_id = ? ORDER BY current_score DESC LIMIT 1',
+                [lobbyId]
+            );
+            if (leaderboard.length > 0 && leaderboard[0].participant_id !== participantId) {
+                const targetId = leaderboard[0].participant_id;
+                await connection.execute(
+                    'UPDATE Participants SET current_score = GREATEST(current_score - 10, 0) WHERE participant_id = ?',
+                    [targetId]
+                );
+                await connection.execute(
+                    'UPDATE Participants SET current_score = current_score + 10 WHERE participant_id = ?',
+                    [participantId]
+                );
+                stolenMessage = ' You stole 10 points from 1st place!';
+            }
+            await connection.execute(
+                'UPDATE Participants SET active_effect_id = NULL WHERE participant_id = ?',
+                [participantId]
+            );
+            activeEffectId = null;
+        }
 
         // 2. Fetch the Card Details
         const [cards] = await connection.execute(
@@ -488,7 +580,17 @@ app.post('/api/scan-card', async (req, res) => {
         // 3. Process Logic Based on Card Type
         if (card.card_type === 'Empty Card') {
             // Empty cards give safe points immediately
-            const pointsAwarded = 10; // Base points
+            let pointsAwarded = 10; // Base points
+            let consumedEffectId = null;
+
+            if (Number(activeEffectId) === 1) { // Double Score
+                pointsAwarded *= 2;
+                consumedEffectId = 1;
+                await connection.execute(
+                    'UPDATE Participants SET active_effect_id = NULL WHERE participant_id = ?',
+                    [participantId]
+                );
+            }
 
             await connection.execute(
                 'UPDATE Participants SET current_score = current_score + ? WHERE participant_id = ?',
@@ -496,12 +598,12 @@ app.post('/api/scan-card', async (req, res) => {
             );
 
             await connection.execute(
-                'INSERT INTO GameLog (lobby_id, participant_id, card_id, points_earned) VALUES (?, ?, ?, ?)',
-                [lobbyId, participantId, card.card_id, pointsAwarded]
+                'INSERT INTO GameLog (lobby_id, participant_id, card_id, applied_effect_id, points_earned) VALUES (?, ?, ?, ?, ?)',
+                [lobbyId, participantId, card.card_id, consumedEffectId, pointsAwarded]
             );
 
             responsePayload.points = pointsAwarded;
-            responsePayload.message = 'Safe draw!';
+            responsePayload.message = `Safe draw! +${pointsAwarded} points.${stolenMessage}`;
 
         } else if (card.card_type === 'Power Card') {
             // Power cards apply an effect to the user
@@ -523,21 +625,41 @@ app.post('/api/scan-card', async (req, res) => {
 
             responsePayload.effectName = effect.name;
             responsePayload.effectDescription = effect.description;
+            if (stolenMessage) {
+                responsePayload.effectDescription += `\n\n(Previous effect: ${stolenMessage.trim()})`;
+            }
 
         } else if (card.card_type === 'Enemy Card') {
-            // Enemy cards trigger a quiz. We don't award points yet.
-            // Fetch a random question from the database
-            const [questions] = await connection.execute(
-                'SELECT question_id, question_text, option_a, option_b, option_c, option_d FROM Questions ORDER BY RAND() LIMIT 1'
-            );
-            
-            // Store the current turn state in the session so we can verify the answer later
-            req.session.currentTurn = {
-                cardId: card.card_id,
-                questionId: questions[0].question_id
-            };
+            if (Number(activeEffectId) === 2) { // Skip Enemy
+                await connection.execute('UPDATE Participants SET active_effect_id = NULL WHERE participant_id = ?', [participantId]);
+                
+                await connection.execute(
+                    'INSERT INTO GameLog (lobby_id, participant_id, card_id, applied_effect_id, points_earned) VALUES (?, ?, ?, ?, ?)',
+                    [lobbyId, participantId, card.card_id, 2, 0]
+                );
 
-            responsePayload.question = questions[0];
+                // Re-route dynamically using empty card UI to show skip status
+                responsePayload.cardType = 'Empty Card';
+                responsePayload.points = 0;
+                responsePayload.message = `Enemy bypassed using your Skip power!${stolenMessage}`;
+            } else {
+                // Enemy cards trigger a quiz. We don't award points yet.
+                // Fetch a random question from the database
+                const [questions] = await connection.execute(
+                    'SELECT question_id, question_text, option_a, option_b, option_c, option_d FROM Questions ORDER BY RAND() LIMIT 1'
+                );
+                
+                // Store the current turn state in the session so we can verify the answer later
+                req.session.currentTurn = {
+                    cardId: card.card_id,
+                    questionId: questions[0].question_id
+                };
+
+                responsePayload.question = questions[0];
+                if (stolenMessage) {
+                    responsePayload.message = stolenMessage.trim();
+                }
+            }
         }
 
         await connection.commit();
@@ -586,7 +708,7 @@ app.post('/api/submit-answer', async (req, res) => {
         }
         
         const participantId = participants[0].participant_id;
-        const activeEffectId = participants[0].active_effect_id;
+        let activeEffectId = participants[0].active_effect_id;
 
         // 2. Verify the Answer
         const [questions] = await connection.execute(
@@ -601,14 +723,22 @@ app.post('/api/submit-answer', async (req, res) => {
 
         const isCorrect = (questions[0].correct_option === selectedOption);
         let pointsEarned = 0;
+        let consumedEffectId = null;
 
         // 3. Calculate Points based on Assignment Rules
         if (isCorrect) {
             // Enemy cards grant double the empty card's base points (10 * 2 = 20)
             pointsEarned = 20; 
 
-            // NOTE: Here is where you would check `activeEffectId` to apply any 
-            // score-boosting power-up logic before updating the score!
+            // Check `activeEffectId` to apply Double Score before saving points
+            if (Number(activeEffectId) === 1) { 
+                pointsEarned *= 2;
+                consumedEffectId = 1;
+                await connection.execute(
+                    'UPDATE Participants SET active_effect_id = NULL WHERE participant_id = ?',
+                    [participantId]
+                );
+            }
             
             await connection.execute(
                 'UPDATE Participants SET current_score = current_score + ? WHERE participant_id = ?',
@@ -619,7 +749,7 @@ app.post('/api/submit-answer', async (req, res) => {
         // 4. Log the Turn in GameLog
         await connection.execute(
             'INSERT INTO GameLog (lobby_id, participant_id, question_id, card_id, applied_effect_id, points_earned, is_correct) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [lobbyId, participantId, questionId, cardId, activeEffectId, pointsEarned, isCorrect]
+            [lobbyId, participantId, questionId, cardId, consumedEffectId, pointsEarned, isCorrect]
         );
 
         // 5. Clear the current turn from the session to prevent duplicate submissions

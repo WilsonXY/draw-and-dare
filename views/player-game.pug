@@ -1,20 +1,19 @@
 extends layout
 
 block content
+  // Include html5-qrcode for QR scanning
+  script(src="https://unpkg.com/html5-qrcode")
+
   .player-mobile-container
     
     // State 1: Waiting Room
     #state-waiting.game-state
       .icon-placeholder (icon)
-      h2 Waiting for Game Start... [cite: 123]
+      h2 Waiting for next turn...
 
     // State 2: QR Scanner
     #state-scanner.game-state.hidden
-      .scanner-viewport
-        span.corner.top-left
-        span.corner.top-right
-        span.corner.bottom-left
-        span.corner.bottom-right
+      #reader
       h2 Scan the Code [cite: 124]
 
     // State 3: Power Card Scanned
@@ -41,9 +40,12 @@ block content
         h2 Empty Card! [cite: 116]
         .icon-placeholder (icon) [cite: 116]
         p#empty-points-granted .... points granted [cite: 127]
+      button.btn.btn-primary#btn-empty-ok OK
 
     // State 6: Game Ended
     #state-game-ended.game-state.hidden
       h2 Game Ended! [cite: 128]
       .icon-placeholder (icon) [cite: 129]
       h1 GG! [cite: 130]
+
+  script(src="/js/game-logic.js")

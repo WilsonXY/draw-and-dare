@@ -143,6 +143,32 @@ $(document).ready(function() {
         });
     });
 
+    // Host Action: End the Game
+    $('#end-game-btn').on('click', function(e) {
+        e.preventDefault();
+        
+        if (!confirm('Are you sure you want to end this game?')) {
+            return;
+        }
+
+        const btn = $(this);
+        btn.prop('disabled', true).text('Ending...');
+
+        $.ajax({
+            url: '/api/end-game',
+            method: 'POST',
+            success: function(response) {
+                if (response.success) {
+                    window.location.href = response.redirect;
+                }
+            },
+            error: function(xhr) {
+                alert(xhr.responseJSON?.message || 'Failed to end the game.');
+                btn.prop('disabled', false).text('End Game');
+            }
+        });
+    });
+
     // AJAX Polling for the Lobby State
     function pollLobby() {
         $.ajax({

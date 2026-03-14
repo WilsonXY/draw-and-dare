@@ -55,3 +55,47 @@ $(document).ready(function() {
         });
     });
 });
+
+$(document).ready(function() {
+    // show the change password modal
+    $('#change-pwd-btn').on('click', function(e) {
+        e.preventDefault();
+        $('#password-modal').removeClass('hidden');
+    });
+
+    // close the change password modal and clear input
+    $('#close-modal').on('click', function() {
+        $('#password-modal').addClass('hidden');
+        $('#new-password').val('');
+    });
+
+    // submit the new password
+    $('#apply-pwd').on('click', function() {
+        const newPassword = $('#new-password').val();
+
+        if (!newPassword || newPassword.trim() === '') {
+            alert('Please enter a new password.');
+            return;
+        }
+
+        $.ajax({
+            url: '/api/change-password',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ newPassword: newPassword }),
+            success: function(response) {
+                if (response.success) {
+                    alert(response.message);
+                    $('#password-modal').addClass('hidden');
+                    $('#new-password').val('');
+                } else {
+                    alert(response.message || 'Error changing password');
+                }
+            },
+            error: function(xhr) {
+                const res= xhr.responseJSON;
+                alert(res && res.message ? res.message: 'Server error. Please try again later.');
+            }
+        });
+    });
+});

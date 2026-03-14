@@ -10,26 +10,61 @@ function showGameState(stateId) {
   if (activeState) {
     activeState.classList.remove('hidden');
   }
+
+  // Dispatch a custom event so other components (like the scanner) can react
+  document.dispatchEvent(new CustomEvent('gameStateChanged', { detail: { stateId } }));
 }
 
 // Example: Simulating game flow for testing
 // In reality, these will be triggered by Socket.io or AJAX responses
 document.addEventListener('DOMContentLoaded', () => {
-  // Uncomment below to test specific screens during development:
-  // showGameState('state-scanner'); 
-  // showGameState('state-enemy-card');
-  // showGameState('state-game-ended');
   
   const powerOkBtn = document.getElementById('btn-power-ok');
   if(powerOkBtn) {
     powerOkBtn.addEventListener('click', () => {
-       // Return to waiting or scanner state after acknowledging power card
-       showGameState('state-waiting');
+       // Return to scanner state to allow continuous testing
+       showGameState('state-scanner');
     });
   }
 });
 
 $(document).ready(function() {
+    let html5QrcodeScanner;
+
+    function startScanner() {
+        if (!html5QrcodeScanner) {
+            html5QrcodeScanner = new Html5QrcodeScanner(
+                "reader",
+                { fps: 10, qrbox: { width: 250, height: 250 } },
+                false
+            );
+            html5QrcodeScanner.render(onScanSuccess);
+        }
+    }
+
+    function stopScanner() {
+        if (html5QrcodeScanner) {
+            html5QrcodeScanner.clear().catch(error => {
+                console.error("Failed to clear scanner: ", error);
+            });
+            html5QrcodeScanner = null;
+        }
+    }
+
+    function onScanSuccess(decodedText, decodedResult) {
+        // Stop the scanner immediately upon successful read to prevent duplicate calls
+        stopScanner();
+        processScannedCard(decodedText);
+    }
+
+    document.addEventListener('gameStateChanged', function(e) {
+        if (e.detail.stateId === 'state-scanner') {
+            startScanner();
+        } else {
+            stopScanner();
+        }
+    });
+
     // Function to handle the scanned QR code value
     function processScannedCard(qrCodeValue) {
         $.ajax({
@@ -42,7 +77,7 @@ $(document).ready(function() {
                     
                     // Route to the correct UI state based on the card drawn
                     if (response.cardType === 'Empty Card') {
-                        $('#empty-points-granted').text(`+${response.points} points granted`);
+                        $('#empty-points-granted').text(response.message || `+${response.points} points granted`);
                         showGameState('state-empty-card');
                         
                     } else if (response.cardType === 'Power Card') {
@@ -51,6 +86,10 @@ $(document).ready(function() {
                         showGameState('state-power-card');
                         
                     } else if (response.cardType === 'Enemy Card') {
+                        // If the Point Steal triggers exactly on an Enemy card draw, notify them
+                        if (response.message) {
+                            alert(response.message);
+                        }
                         // Populate the question UI
                         const q = response.question;
                         $('#state-enemy-card .question-box h3').text(q.question_text);
@@ -95,7 +134,12 @@ $(document).ready(function() {
 
     // Handle returning to the lobby/scanner after viewing an Empty or Power card
     $('#btn-power-ok').on('click', function() {
-        showGameState('state-waiting'); // Or 'state-scanner' depending on turn logic
+        showGameState('state-scanner'); 
+    });
+
+    // Handle acknowledging the Empty card
+    $('#btn-empty-ok').on('click', function() {
+        showGameState('state-scanner'); 
     });
 
     
@@ -123,8 +167,8 @@ $(document).ready(function() {
                         alert('Incorrect! Better luck next time.');
                     }
                     
-                    // Return the player to the waiting state for the next turn
-                    showGameState('state-waiting');
+                    // Return the player to the scanner state for continuous testing
+                    showGameState('state-scanner');
                     
                     // Re-enable buttons for the next time this screen is shown
                     $('#state-enemy-card .btn-answer').prop('disabled', false);
@@ -136,4 +180,36 @@ $(document).ready(function() {
             }
         });
     });
+
+    // Show the scanner state initially when the game page loads
+    showGameState('state-scanner');
+
+    // Poll the game state to check if the host ends the game
+    let gamePollTimer;
+    function pollGameState() {
+        $.ajax({
+            url: '/api/lobby-status',
+            method: 'GET',
+            success: function(data) {
+                if (data.status === 'ended') {
+                    alert('The host has ended the game.');
+                    window.location.href = '/';
+                } else if (window.location.pathname === '/game') {
+                    gamePollTimer = setTimeout(pollGameState, 2000);
+                }
+            },
+            error: function(xhr) {
+                // If the server returns 400 (No active lobby), the session was cleared/ended
+                if (xhr.status === 400) {
+                    window.location.href = '/';
+                } else if (window.location.pathname === '/game') {
+                    gamePollTimer = setTimeout(pollGameState, 2000);
+                }
+            }
+        });
+    }
+
+    if (window.location.pathname === '/game') {
+        pollGameState();
+    }
 });
