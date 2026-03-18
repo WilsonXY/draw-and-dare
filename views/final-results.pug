@@ -1,16 +1,17 @@
-doctype html
-html(lang="en")
-  head
-    meta(charset="UTF-8")
-    meta(name="viewport", content="width=device-width, initial-scale=1.0")
-    title Final Results - Draw and Dare
-    link(rel="stylesheet", href="/css/style.css")
-  body
-    .container
-      h1 Game Over! Final Results
+extends layout
+
+block content
+  .container
+    .dashboard-container.final-results-box
+      h1(style="font-size: 2.5rem; margin-bottom: 1rem;") Game Over! 🏁
       
       if leaderboard && leaderboard.length > 0
-        table.leaderboard-table
+        .winner-display
+          h2 👑 #{leaderboard[0].username} 👑
+          .icon-placeholder(style="font-size: 4rem; width: 120px; height: 120px; border-color: var(--accent-color); border-width: 4px;") 🏆
+          
+        h3 Final Rankings
+        table.ranking-table(style="margin-top: 1rem; margin-bottom: 2rem;")
           thead
             tr
               th Rank
@@ -18,11 +19,20 @@ html(lang="en")
               th Score
           tbody
             each player, index in leaderboard
-              tr
-                td #{index + 1}
-                td #{player.username}
-                td #{player.current_score}
+              tr(style=index === 0 ? "font-weight: bold; background-color: rgba(241, 196, 15, 0.2);" : "")
+                td
+                  if index === 0
+                    | 🥇 1st
+                  else if index === 1
+                    | 🥈 2nd
+                  else if index === 2
+                    | 🥉 3rd
+                  else
+                    | #{index + 1}th
+                td= player.username
+                td #{player.current_score} pts
       else
-        p No players joined this game.
+        .icon-placeholder(style="font-size: 4rem;") 🤷
+        p(style="margin: 2rem 0;") No scores were recorded for this game.
         
-      a.btn(href="/") Back to Main Menu
+      a.btn.btn-primary.btn-large(href="/" style="margin-top: 2rem;") Back to Home

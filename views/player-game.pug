@@ -8,45 +8,45 @@ block content
     
     // State 1: Waiting Room
     #state-waiting.game-state.hidden
-      .icon-placeholder (icon)
+      .icon-placeholder(style="font-size: 3rem;") ⏳
       h2 Waiting for next turn...
       p Please wait while other players take their turn.
 
     // State 2: QR Scanner
     #state-scanner.game-state.hidden
+      h2 Scan the Code
       #reader
-      h2 Scan the Code [cite: 124]
 
     // State 3: Power Card Scanned
     #state-power-card.game-state.hidden
       .card-display.power-card
-        h2 Congrats! [cite: 120]
-        .icon-placeholder (icon) [cite: 120]
-        p#power-description power card description [cite: 120]
+        h2 Congrats!
+        .icon-placeholder(style="font-size: 3rem;") ⚡
+        p#power-description power card description
       button.btn.btn-primary#btn-power-ok OK
 
     // State 4: Enemy Card Scanned (Quiz)
     #state-enemy-card.game-state.hidden
       .card-display.enemy-card
         .question-box
-          h3 (Question) [cite: 121]
+          h3.question-text (Question)
         .answers-box
           // Options will be injected here
-          button.btn.btn-answer (Answers) [cite: 125]
+          button.btn.btn-answer (Answers)
           button.btn.btn-answer (Answers)
 
     // State 5: Empty Card Scanned
     #state-empty-card.game-state.hidden
       .card-display.empty-card
-        h2 Empty Card! [cite: 116]
-        .icon-placeholder (icon) [cite: 116]
-        p#empty-points-granted .... points granted [cite: 127]
+        h2 Empty Card!
+        .icon-placeholder(style="font-size: 3rem;") 💨
+        p#empty-points-granted .... points granted
       button.btn.btn-primary#btn-empty-ok OK
 
     // State 6: Game Ended
     #state-game-ended.game-state.hidden
-      h2 Game Ended! [cite: 128]
-      .icon-placeholder (icon) [cite: 129]
-      h1 GG! [cite: 130]
+      h2 Game Ended!
+      .icon-placeholder(style="font-size: 3rem;") 🏁
+      h1 GG!
 
   script(src="/js/game-logic.js")

@@ -28,7 +28,8 @@ body {
 /* --- Navigation & Sidebar --- */
 .top-nav {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
+  gap: 1rem;
   align-items: center;
   padding: 1rem 2rem;
   background-color: #f5f5f5;
@@ -47,6 +48,10 @@ body {
   color: var(--text-color);
 }
 
+.logo {
+  margin-right: auto;
+}
+
 .sidebar {
   position: fixed;
   left: -250px; /* Hidden by default */
@@ -54,9 +59,8 @@ body {
   width: 250px;
   height: 100%;
   background-color: #fff;
-  border-right: 3px solid var(--text-color);
-  box-shadow: 5px 0 0 rgba(0,0,0,0.1);
-  transition: 0.3s ease-in-out;
+  box-shadow: 3px 0 0 rgba(0,0,0,0.1);
+  transition: 0.2s ease-in-out;
   z-index: 1000;
   padding: 2rem;
 }
@@ -176,9 +180,21 @@ input[type="text"]:focus, input[type="password"]:focus {
 /* --- Lobby Layout --- */
 .lobby-container {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   width: 100%;
   max-width: 800px;
   gap: 2rem;
+  margin: auto;
+}
+
+/* Force direct text/titles to span full width and center */
+.lobby-container > h1,
+.lobby-container > h2,
+.lobby-container > h3,
+.lobby-container > p {
+  width: 100%;
+  text-align: center;
 }
 
 .participants-section, .info-section {
@@ -238,6 +254,10 @@ input[type="text"]:focus, input[type="password"]:focus {
 @media (max-width: 768px) {
   .lobby-container {
     flex-direction: column;
+  }
+
+  .logo {
+    font-size: 1.5rem;
   }
 }
 
@@ -402,6 +422,46 @@ input[type="text"]:focus, input[type="password"]:focus {
 .bottom-left { bottom: 0; left: 0; border-width: 0 0 4px 4px; }
 .bottom-right { bottom: 0; right: 0; border-width: 0 4px 4px 0; }
 
+/* --- QR Scanner (#reader) --- */
+#reader {
+  border: 2px solid var(--text-color) !important;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+  background-color: #ffffff85;
+  padding: 2rem;
+}
+
+#reader button {
+  background-color: #3498db;
+  color: white;
+  padding: 0.6rem 1.2rem;
+  border: 2px solid var(--text-color) !important;
+  box-shadow: 4px 4px 0 var(--text-color);
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.1s ease;
+  margin: 0.5rem;
+}
+
+#reader button:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 var(--text-color);
+}
+
+#reader button:hover {
+  background-color: #2980b9;
+}
+
+#reader select {
+  padding: 0.6rem;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  margin: 0.5rem;
+  font-family: inherit;
+}
+
 /* Card Displays */
 .card-display {
   border: 3px dashed var(--text-color);
@@ -413,11 +473,29 @@ input[type="text"]:focus, input[type="password"]:focus {
   box-shadow: 4px 4px 0 rgba(0,0,0,0.1);
 }
 
+.question-text {
+  padding-bottom: 2rem;
+}
+
 .btn-answer {
   background-color: #fff;
   color: var(--text-color);
   border: 2px solid var(--text-color);
   margin-bottom: 0.5rem;
+}
+
+/* --- Final Results --- */
+.final-results-box {
+  max-width: 600px;
+  padding: 3rem;
+}
+
+.winner-display {
+  margin: 2rem 0;
+}
+
+.winner-display h2 {
+  color: var(--primary-color);
 }
 
 @keyframes fadeIn {

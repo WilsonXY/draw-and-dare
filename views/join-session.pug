@@ -4,42 +4,6 @@ block content
   // Include html5-qrcode for QR scanning
   script(src="https://unpkg.com/html5-qrcode")
 
-  style.
-    #reader {
-      border: 2px solid  !important;
-      border-radius: 10px;
-      overflow: hidden;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.1);
-      background-color: #ffffff85;
-      padding: 2rem;
-    }
-    #reader button {
-      background-color: #3498db;
-      color: white;
-      padding: 0.6rem 1.2rem;
-      border: 2px solid var(--text-color) !important;
-      box-shadow: 4px 4px 0 var(--text-color);
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: bold;
-      transition: all 0.1s ease;
-      margin: 0.5rem;
-    }
-    #reader button:active {
-      transform: translate(2px, 2px);
-      box-shadow: 2px 2px 0 var(--text-color);
-    }
-    #reader button:hover {
-      background-color: #2980b9;
-    }
-    #reader select {
-      padding: 0.6rem;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      margin: 0.5rem;
-      font-family: inherit;
-    }
-
   .join-container(style="text-align: center; max-width: 400px; width: 100%;")
     h2 Join Session
     form#join-form(style="margin-top: 2rem;")
