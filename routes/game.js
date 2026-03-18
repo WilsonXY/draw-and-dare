@@ -1,8 +1,12 @@
 const express = require('express');
 const router = express.Router();
 
+// In-memory store for currently active questions per lobby
+const activeLobbyQuestions = {};
+
 // Helper to advance the turn sequentially
 async function advanceTurn(lobbyId, connection) {
+    delete activeLobbyQuestions[lobbyId]; // Clear any active question on turn advance
     const [lobby] = await connection.execute('SELECT current_turn_participant_id FROM Lobby WHERE lobby_id = ?', [lobbyId]);
     if (lobby.length === 0 || !lobby[0].current_turn_participant_id) return;
     
@@ -94,6 +98,9 @@ router.post('/api/end-game', async (req, res) => {
         // Clear the active lobby from the host's session
         req.session.currentLobbyId = null;
         req.session.isHost = false;
+        
+        // Clean up memory
+        delete activeLobbyQuestions[lobbyId];
 
         res.status(200).json({ 
             success: true, 
@@ -326,6 +333,12 @@ router.post('/api/scan-card', async (req, res) => {
                     cardId: card.card_id,
                     questionId: questions[0].question_id
                 };
+                
+                // Store the current question in memory for the host view to sync
+                activeLobbyQuestions[lobbyId] = {
+                    question: questions[0],
+                    username: req.session.user.username
+                };
 
                 responsePayload.question = questions[0];
                 // Do NOT advance turn yet, waiting for answer!
@@ -481,7 +494,8 @@ router.get('/api/host-data', async (req, res) => {
         res.status(200).json({ 
             success: true, 
             leaderboard: leaderboard, 
-            logs: logs 
+            logs: logs,
+            activeQuestion: activeLobbyQuestions[lobbyId] || null
         });
 
     } catch (error) {

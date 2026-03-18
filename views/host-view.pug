@@ -4,18 +4,18 @@ block content
   .host-dashboard
     // Top Section: Currently Answering Player (Question Board)
     .question-board-container
-      h2 Question Board
+      h2.question-board-title Question Board
       .question-display
-        h3#current-question (Questions) [cite: 101]
+        h3#current-question Waiting for a player to scan an Enemy Card...
       .answer-pad
         ul#current-options
-          li.option (Answer Pad/Options) [cite: 102]
+          li.option No active question
       p.answering-status Answering by: 
-        span#active-player-name username [cite: 103]
+        span#active-player-name ...
 
     // Bottom/Side Section: Leaderboard
     .leaderboard-container
-      h2 Players Ranking [cite: 90]
+      h2 Players Ranking
       table.ranking-table
         thead
           tr
@@ -29,12 +29,12 @@ block content
             td WeeGamer
             td 1520
       
+      h3.game-log-title Game Log
       .game-log-container
-        h3 Game Log [cite: 93]
         ul#game-log
           li WeeGamer drew an Enemy Card!
           li WeeGamer answered correctly (+20 pts).
 
-      button.btn.btn-danger#end-game-btn End Game [cite: 104]
+      button.btn.btn-danger#end-game-btn End Game
 
   script(src="/js/host.js")

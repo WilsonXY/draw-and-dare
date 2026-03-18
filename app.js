@@ -7,6 +7,25 @@ const mysql = require('mysql2/promise'); // Using promise wrapper for async/awai
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// // --- ONLY RUN IN DEVELOPMENT ---
+// if (process.env.NODE_ENV !== 'production') {
+//     const livereload = require("livereload");
+//     const connectLiveReload = require("connect-livereload");
+
+//     const liveReloadServer = livereload.createServer();
+//     liveReloadServer.watch(path.join(__dirname, 'public'));
+//     liveReloadServer.watch(path.join(__dirname, 'views'));
+
+//     liveReloadServer.server.once("connection", () => {
+//         setTimeout(() => {
+//             liveReloadServer.refresh("/");
+//         }, 100);
+//     });
+
+//     app.use(connectLiveReload());
+//     console.log("Live Reload enabled for development.");
+// }
+// // -------------------------------
 
 // 1. View Engine Setup (Pug)
 app.set('views', path.join(__dirname, 'views'));

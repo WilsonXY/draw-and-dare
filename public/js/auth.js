@@ -69,6 +69,14 @@ $(document).ready(function() {
         $('#new-password').val('');
     });
 
+    // close the change password modal when clicking outside the content
+    $('#password-modal').on('click', function(e) {
+        if (e.target === this) {
+            $(this).addClass('hidden');
+            $('#new-password').val('');
+        }
+    });
+
     // submit the new password
     $('#apply-pwd').on('click', function() {
         const newPassword = $('#new-password').val();

@@ -11,8 +11,8 @@ html(lang="en")
     if user
       #sidebar.sidebar
         .sidebar-header
+          h3 Welcome Back =P
           h3 #{user.username}
-          p Account Details
         ul.sidebar-nav
           li: a(href="#", id="change-pwd-btn") Change Password
           li: a(href="/logout") Logout
@@ -20,7 +20,7 @@ html(lang="en")
       // Top Navigation
       header.top-nav
         button#menu-toggle.menu-icon ☰
-        h1.logo Draw & Dare
+        h1.logo: a(href="/" style="text-decoration: none; color: inherit;") Draw & Dare
         .user-info #{user.username}
     else
       // Simple header for logged out users
@@ -36,8 +36,9 @@ html(lang="en")
       .modal-content
         h2 Change Password
         input(type="password" placeholder="New Password" id="new-password")
-        button.btn.btn-primary#apply-pwd Apply
-        button.btn.btn-secondary#close-modal Cancel
+        .modal-actions(style="margin-top: 15px; display: flex; gap: 10px; justify-content: center;")
+          button.btn.btn-primary#apply-pwd Apply
+          button.btn.btn-secondary#close-modal Cancel
 
     script(src="/js/main.js")
     script(src="/js/auth.js")

@@ -4,8 +4,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const sidebar = document.getElementById('sidebar');
 
   if (menuBtn && sidebar) {
-    menuBtn.addEventListener('click', () => {
+    menuBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
       sidebar.classList.toggle('active');
+    });
+
+    // Close sidebar when clicking outside of it
+    document.addEventListener('click', (e) => {
+      if (sidebar.classList.contains('active') && !sidebar.contains(e.target) && !menuBtn.contains(e.target)) {
+        sidebar.classList.remove('active');
+      }
     });
   }
 
@@ -23,6 +31,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     closePwdModal.addEventListener('click', () => {
       pwdModal.classList.add('hidden');
+    });
+
+    // Close modal when clicking outside of its content
+    pwdModal.addEventListener('click', (e) => {
+      if (e.target === pwdModal) {
+        pwdModal.classList.add('hidden');
+      }
     });
   }
 });
