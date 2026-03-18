@@ -225,14 +225,26 @@ app.get('/api/lobby-status', async (req, res) => {
         );
 
         const [lobbyInfo] = await req.db.execute(
-            'SELECT status FROM Lobby WHERE lobby_id = ?', 
+            'SELECT status, current_turn_participant_id FROM Lobby WHERE lobby_id = ?', 
             [lobbyId]
         );
+
+        let isMyTurn = false;
+        if (req.session.user) {
+            const [me] = await req.db.execute(
+                'SELECT participant_id FROM Participants WHERE lobby_id = ? AND user_id = ?', 
+                [lobbyId, req.session.user.user_id]
+            );
+            if (me.length > 0 && lobbyInfo[0].current_turn_participant_id === me[0].participant_id) {
+                isMyTurn = true;
+            }
+        }
 
         // Send JSON back to the client
         res.json({
             status: lobbyInfo[0].status,
-            participants: participants
+            participants: participants,
+            isMyTurn: isMyTurn
         });
 
     } catch (error) {
@@ -416,10 +428,17 @@ app.post('/api/start-game', async (req, res) => {
     }
 
     try {
+            // Get the first participant to start the game
+            const [participants] = await req.db.execute(
+                'SELECT participant_id FROM Participants WHERE lobby_id = ? ORDER BY participant_id ASC LIMIT 1',
+                [req.session.currentLobbyId]
+            );
+            const startingParticipantId = participants.length > 0 ? participants[0].participant_id : null;
+
         // Update the lobby status to 'playing'
         const [result] = await req.db.execute(
-            'UPDATE Lobby SET status = ? WHERE lobby_id = ? AND host_user_id = ?',
-            ['playing', req.session.currentLobbyId, req.session.user.user_id]
+                'UPDATE Lobby SET status = ?, current_turn_participant_id = ? WHERE lobby_id = ? AND host_user_id = ?',
+                ['playing', startingParticipantId, req.session.currentLobbyId, req.session.user.user_id]
         );
 
         if (result.affectedRows === 0) {
@@ -503,6 +522,27 @@ app.get('/game', async (req, res) => {
 });
 
 
+// Helper to advance the turn sequentially
+async function advanceTurn(lobbyId, connection) {
+    const [lobby] = await connection.execute('SELECT current_turn_participant_id FROM Lobby WHERE lobby_id = ?', [lobbyId]);
+    if (lobby.length === 0 || !lobby[0].current_turn_participant_id) return;
+    
+    const currentId = lobby[0].current_turn_participant_id;
+    const [participants] = await connection.execute('SELECT participant_id FROM Participants WHERE lobby_id = ? ORDER BY participant_id ASC', [lobbyId]);
+    
+    if (participants.length > 0) {
+        let nextIndex = 0;
+        for (let i = 0; i < participants.length; i++) {
+            if (participants[i].participant_id === currentId) {
+                nextIndex = (i + 1) % participants.length;
+                break;
+            }
+        }
+        const nextId = participants[nextIndex].participant_id;
+        await connection.execute('UPDATE Lobby SET current_turn_participant_id = ? WHERE lobby_id = ?', [nextId, lobbyId]);
+    }
+}
+
 // Core Game Loop API
 // 1. Scan Card API (AJAX endpoint for the Player)
 app.post('/api/scan-card', async (req, res) => {
@@ -537,30 +577,11 @@ app.post('/api/scan-card', async (req, res) => {
         const participantId = participants[0].participant_id;
         let activeEffectId = participants[0].active_effect_id;
 
-        let stolenMessage = '';
-        // Apply Point Steal effect exactly at the start of the next turn
-        if (Number(activeEffectId) === 3) {
-            const [leaderboard] = await connection.execute(
-                'SELECT participant_id, current_score FROM Participants WHERE lobby_id = ? ORDER BY current_score DESC LIMIT 1',
-                [lobbyId]
-            );
-            if (leaderboard.length > 0 && leaderboard[0].participant_id !== participantId) {
-                const targetId = leaderboard[0].participant_id;
-                await connection.execute(
-                    'UPDATE Participants SET current_score = GREATEST(current_score - 10, 0) WHERE participant_id = ?',
-                    [targetId]
-                );
-                await connection.execute(
-                    'UPDATE Participants SET current_score = current_score + 10 WHERE participant_id = ?',
-                    [participantId]
-                );
-                stolenMessage = ' You stole 10 points from 1st place!';
-            }
-            await connection.execute(
-                'UPDATE Participants SET active_effect_id = NULL WHERE participant_id = ?',
-                [participantId]
-            );
-            activeEffectId = null;
+        // Verify it is the player's turn
+        const [lobby] = await connection.execute('SELECT current_turn_participant_id FROM Lobby WHERE lobby_id = ?', [lobbyId]);
+        if (lobby.length > 0 && lobby[0].current_turn_participant_id !== participantId) {
+            await connection.rollback();
+            return res.status(403).json({ success: false, message: 'Wait for your turn to scan!' });
         }
 
         // 2. Fetch the Card Details
@@ -580,11 +601,11 @@ app.post('/api/scan-card', async (req, res) => {
         // 3. Process Logic Based on Card Type
         if (card.card_type === 'Empty Card') {
             // Empty cards give safe points immediately
-            let pointsAwarded = 10; // Base points
+            let pointsEarned = 10; // Base points
             let consumedEffectId = null;
 
             if (Number(activeEffectId) === 1) { // Double Score
-                pointsAwarded *= 2;
+                pointsEarned *= 2;
                 consumedEffectId = 1;
                 await connection.execute(
                     'UPDATE Participants SET active_effect_id = NULL WHERE participant_id = ?',
@@ -593,55 +614,96 @@ app.post('/api/scan-card', async (req, res) => {
             }
 
             await connection.execute(
-                'UPDATE Participants SET current_score = current_score + ? WHERE participant_id = ?',
-                [pointsAwarded, participantId]
+                'UPDATE Participants SET current_score = current_score + ?, score_updated_at = CURRENT_TIMESTAMP WHERE participant_id = ?',
+                [pointsEarned, participantId]
             );
 
             await connection.execute(
                 'INSERT INTO GameLog (lobby_id, participant_id, card_id, applied_effect_id, points_earned) VALUES (?, ?, ?, ?, ?)',
-                [lobbyId, participantId, card.card_id, consumedEffectId, pointsAwarded]
+                [lobbyId, participantId, card.card_id, consumedEffectId, pointsEarned]
             );
 
-            responsePayload.points = pointsAwarded;
-            responsePayload.message = `Safe draw! +${pointsAwarded} points.${stolenMessage}`;
+            responsePayload.points = pointsEarned;
+            responsePayload.message = `Safe draw! +${pointsEarned} points.`;
+
+            await advanceTurn(lobbyId, connection); // Turn over!
 
         } else if (card.card_type === 'Power Card') {
-            // Power cards apply an effect to the user
+            // Power cards apply a random effect to the user
             const [effects] = await connection.execute(
-                'SELECT * FROM PowerEffects WHERE power_effect_id = ?',
-                [card.power_effect_id]
+                'SELECT * FROM PowerEffects ORDER BY RAND() LIMIT 1'
             );
             const effect = effects[0];
+            const randomPowerEffectId = effect.power_effect_id;
+
+            let activeEffectToSet = randomPowerEffectId;
+            let pointsEarned = 0;
+            let effectAddendum = '';
+
+            // point steal (3)
+            if (randomPowerEffectId === 3) {
+                activeEffectToSet = null; // Consume instantly
+
+                const [leaderboard] = await connection.execute(
+                    'SELECT participant_id, current_score FROM Participants WHERE lobby_id = ? ORDER BY current_score DESC, score_updated_at ASC, participant_id ASC',
+                    [lobbyId]
+                );
+
+                if (leaderboard.length > 0 && leaderboard[0].participant_id === participantId) {
+                    pointsEarned = 10;
+                    await connection.execute('UPDATE Participants SET current_score = current_score + ?, score_updated_at = CURRENT_TIMESTAMP WHERE participant_id = ?', [pointsEarned, participantId]);
+                    effectAddendum = `\n\nYou are already in 1st place! You gained ${pointsEarned} points instead!`;
+                } else if (leaderboard.length > 0) {
+                    const targetId = leaderboard[0].participant_id;
+                    const targetScore = leaderboard[0].current_score;
+                    pointsEarned = Math.min(5, targetScore);
+                    
+                    if (pointsEarned > 0) {
+                        await connection.execute('UPDATE Participants SET current_score = current_score - ?, score_updated_at = CURRENT_TIMESTAMP WHERE participant_id = ?', [pointsEarned, targetId]);
+                        await connection.execute('UPDATE Participants SET current_score = current_score + ?, score_updated_at = CURRENT_TIMESTAMP WHERE participant_id = ?', [pointsEarned, participantId]);
+                        effectAddendum = `\n\nYou stole ${pointsEarned} points from 1st place!`;
+                    } else {
+                        effectAddendum = `\n\nYou tried to steal from 1st place, but they had 0 points to steal!`;
+                    }
+                }
+            }
 
             await connection.execute(
                 'UPDATE Participants SET active_effect_id = ? WHERE participant_id = ?',
-                [card.power_effect_id, participantId]
+                [activeEffectToSet, participantId]
             );
 
             await connection.execute(
                 'INSERT INTO GameLog (lobby_id, participant_id, card_id, applied_effect_id, points_earned) VALUES (?, ?, ?, ?, ?)',
-                [lobbyId, participantId, card.card_id, card.power_effect_id, 0]
+                [lobbyId, participantId, card.card_id, randomPowerEffectId, pointsEarned]
             );
 
             responsePayload.effectName = effect.name;
-            responsePayload.effectDescription = effect.description;
-            if (stolenMessage) {
-                responsePayload.effectDescription += `\n\n(Previous effect: ${stolenMessage.trim()})`;
-            }
+            responsePayload.effectDescription = effect.description + effectAddendum;
+
+            await advanceTurn(lobbyId, connection); // Turn over!
 
         } else if (card.card_type === 'Enemy Card') {
             if (Number(activeEffectId) === 2) { // Skip Enemy
                 await connection.execute('UPDATE Participants SET active_effect_id = NULL WHERE participant_id = ?', [participantId]);
                 
+                pointsEarned = 10;
+                await connection.execute(
+                    'UPDATE Participants SET current_score = current_score + ?, score_updated_at = CURRENT_TIMESTAMP WHERE participant_id = ?',
+                    [pointsEarned, participantId]
+                );
+
                 await connection.execute(
                     'INSERT INTO GameLog (lobby_id, participant_id, card_id, applied_effect_id, points_earned) VALUES (?, ?, ?, ?, ?)',
-                    [lobbyId, participantId, card.card_id, 2, 0]
+                    [lobbyId, participantId, card.card_id, 2, pointsEarned]
                 );
 
                 // Re-route dynamically using empty card UI to show skip status
                 responsePayload.cardType = 'Empty Card';
-                responsePayload.points = 0;
-                responsePayload.message = `Enemy bypassed using your Skip power!${stolenMessage}`;
+                responsePayload.points = pointsEarned;
+                responsePayload.message = `Enemy bypassed using your Skip power! +${pointsEarned} points.`;
+                
+                await advanceTurn(lobbyId, connection); // Turn over!
             } else {
                 // Enemy cards trigger a quiz. We don't award points yet.
                 // Fetch a random question from the database
@@ -656,9 +718,7 @@ app.post('/api/scan-card', async (req, res) => {
                 };
 
                 responsePayload.question = questions[0];
-                if (stolenMessage) {
-                    responsePayload.message = stolenMessage.trim();
-                }
+                // Do NOT advance turn yet, waiting for answer!
             }
         }
 
@@ -741,7 +801,7 @@ app.post('/api/submit-answer', async (req, res) => {
             }
             
             await connection.execute(
-                'UPDATE Participants SET current_score = current_score + ? WHERE participant_id = ?',
+                'UPDATE Participants SET current_score = current_score + ?, score_updated_at = CURRENT_TIMESTAMP WHERE participant_id = ?',
                 [pointsEarned, participantId]
             );
         }
@@ -754,6 +814,8 @@ app.post('/api/submit-answer', async (req, res) => {
 
         // 5. Clear the current turn from the session to prevent duplicate submissions
         req.session.currentTurn = null;
+
+        await advanceTurn(lobbyId, connection); // Turn over!
 
         await connection.commit();
 
@@ -792,7 +854,7 @@ app.get('/api/host-data', async (req, res) => {
             FROM Participants p 
             JOIN Users u ON p.user_id = u.user_id 
             WHERE p.lobby_id = ? 
-            ORDER BY p.current_score DESC
+            ORDER BY p.current_score DESC, p.score_updated_at ASC, p.participant_id ASC
         `, [lobbyId]);
 
         // 2. Fetch Game Log Data (Last 10 turns)

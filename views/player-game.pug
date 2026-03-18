@@ -7,9 +7,10 @@ block content
   .player-mobile-container
     
     // State 1: Waiting Room
-    #state-waiting.game-state
+    #state-waiting.game-state.hidden
       .icon-placeholder (icon)
       h2 Waiting for next turn...
+      p Please wait while other players take their turn.
 
     // State 2: QR Scanner
     #state-scanner.game-state.hidden

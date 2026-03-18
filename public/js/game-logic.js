@@ -132,14 +132,16 @@ $(document).ready(function() {
         processScannedCard(val);
     });
 
+    window.isMyTurn = false; // Globally track the turn
+
     // Handle returning to the lobby/scanner after viewing an Empty or Power card
     $('#btn-power-ok').on('click', function() {
-        showGameState('state-scanner'); 
+        showGameState(window.isMyTurn ? 'state-scanner' : 'state-waiting'); 
     });
 
     // Handle acknowledging the Empty card
     $('#btn-empty-ok').on('click', function() {
-        showGameState('state-scanner'); 
+        showGameState(window.isMyTurn ? 'state-scanner' : 'state-waiting'); 
     });
 
     
@@ -168,7 +170,7 @@ $(document).ready(function() {
                     }
                     
                     // Return the player to the scanner state for continuous testing
-                    showGameState('state-scanner');
+                    showGameState(window.isMyTurn ? 'state-scanner' : 'state-waiting');
                     
                     // Re-enable buttons for the next time this screen is shown
                     $('#state-enemy-card .btn-answer').prop('disabled', false);
@@ -181,8 +183,8 @@ $(document).ready(function() {
         });
     });
 
-    // Show the scanner state initially when the game page loads
-    showGameState('state-scanner');
+    // Initially wait until polling confirms it's the player's turn
+    showGameState('state-waiting');
 
     // Poll the game state to check if the host ends the game
     let gamePollTimer;
@@ -195,6 +197,17 @@ $(document).ready(function() {
                     alert('The host has ended the game.');
                     window.location.href = '/';
                 } else if (window.location.pathname === '/game') {
+                    window.isMyTurn = data.isMyTurn;
+
+                    // Transition to scanner if it becomes our turn and we are waiting
+                    if (data.isMyTurn && !$('#state-waiting').hasClass('hidden')) {
+                        showGameState('state-scanner');
+                    } 
+                    // Transition to waiting if it stops being our turn and we are scanning
+                    else if (!data.isMyTurn && !$('#state-scanner').hasClass('hidden')) {
+                        showGameState('state-waiting');
+                    }
+
                     gamePollTimer = setTimeout(pollGameState, 2000);
                 }
             },

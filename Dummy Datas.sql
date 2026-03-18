@@ -11,22 +11,21 @@ INSERT INTO PowerEffects (name, description) VALUES
 ('Point Steal', 'Steals 10 points from the player currently in first place.');
 
 -- Insert Empty Cards (Safe points)
-INSERT INTO Cards (card_type, qr_code_value, power_effect_id) VALUES 
-('Empty Card', 101, NULL),
-('Empty Card', 102, NULL),
-('Empty Card', 103, NULL);
+INSERT INTO Cards (card_type, qr_code_value) VALUES 
+('Empty Card', 101),
+('Empty Card', 102),
+('Empty Card', 103);
 
 -- Insert Enemy Cards (Triggers Quiz)
-INSERT INTO Cards (card_type, qr_code_value, power_effect_id) VALUES 
-('Enemy Card', 201, NULL),
-('Enemy Card', 202, NULL),
-('Enemy Card', 203, NULL);
+INSERT INTO Cards (card_type, qr_code_value) VALUES 
+('Enemy Card', 201),
+('Enemy Card', 202),
+('Enemy Card', 203);
 
--- Insert Power Cards (Links to the PowerEffects table via ID)
--- Assuming the PowerEffects inserted above got IDs 1, 2, and 3
-INSERT INTO Cards (card_type, qr_code_value, power_effect_id) VALUES 
-('Power Card', 301, 1), -- Double Score
-('Power Card', 302, 2), -- Skip Enemy
-('Power Card', 303, 3); -- Point Steal
+-- Insert Power Cards
+INSERT INTO Cards (card_type, qr_code_value) VALUES 
+('Power Card', 301),
+('Power Card', 302),
+('Power Card', 303);
 
 select * from Questions;
