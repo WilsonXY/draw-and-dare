@@ -1,58 +1,57 @@
+require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const bodyParser = require('body-parser');
 const session = require('express-session');
-const mysql = require('mysql2/promise'); // Using promise wrapper for async/await
+const mysql = require('mysql2/promise'); // Use promise wrapper
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// 1. View Engine Setup (Pug)
+// View Engine Setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'pug');
 
 
-// 2. Middleware Configuration
-// Serve static files (CSS, client-side JS, images)
+// Middleware Configuration
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Parse URL-encoded bodies (Standard form submissions)
+// Parse URL-encoded bodies
 app.use(bodyParser.urlencoded({ extended: false }));
 
-// Parse JSON bodies (Crucial for receiving AJAX requests)
+// Parse JSON bodies (for AJAX requests)
 app.use(bodyParser.json());
 
 // Configure Sessions
 app.use(session({
-    secret: 'draw_and_dare_secret_key', // Replace with a strong environment variable in production
+    secret: process.env.SESSION_SECRET || 'draw_and_dare_secret_key',
     resave: false,
     saveUninitialized: false,
     cookie: { 
-        secure: false, // Set to true if using HTTPS
+        secure: false,
         maxAge: 1000 * 60 * 60 * 24 // 24 hours
     }
 }));
 
-// Global variable middleware for Pug templates
+// Global variable middleware
 app.use((req, res, next) => {
-    // Make session data accessible in all Pug templates
+    // Make session data accessible in Pug templates
     res.locals.user = req.session.user || null;
     next();
 });
 
-// 3. Database Connection Pool Setup
-// It's best practice to use a pool rather than a single connection
+// Database Connection Pool Setup
 const db = mysql.createPool({
-    host: 'localhost',
-    user: 'root', // Replace with your MySQL username
-    password: 'MySQL050530140787.', // Replace with your MySQL password
-    database: 'drawanddare', // Database name
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME || 'drawanddare',
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0
 });
 
-// Pass the database pool to requests so routes can use it
+// Pass the database pool to requests
 app.use((req, res, next) => {
     req.db = db;
     next();
