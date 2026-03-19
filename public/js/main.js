@@ -77,7 +77,7 @@ $(document).ready(function() {
     $('#create-session-btn').on('click', function(e) {
         e.preventDefault();
 
-        // Optional: Disable button to prevent double-clicks
+        // Disable button to prevent double-clicks
         $(this).prop('disabled', true).text('Creating...');
 
         $.ajax({
@@ -85,6 +85,7 @@ $(document).ready(function() {
             method: 'POST',
             success: function(response) {
                 if (response.success) {
+                    $('#create-session-btn').prop('disabled', false).text('Create Session'); // Set back to original status
                     // Redirect to the newly created lobby
                     window.location.href = response.redirect;
                 }
