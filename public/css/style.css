@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Balsamiq+Sans:ital,wght@0,400;0,700;1,400;1,700&family=Gochi+Hand&family=Permanent+Marker&display=swap');
+
 :root {
   --primary-color: #0056b3; /* Pen blue */
   --secondary-color: #e74c3c; /* Red marker */
@@ -12,7 +14,7 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  font-family: 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', 'Caveat', sans-serif;
+  font-family: 'Comic Sans MS', 'Balsamiq Sans', 'Gochi Hand', 'Permanent Marker', sans-serif;
 }
 
 body {
@@ -515,4 +517,40 @@ input[type="text"]:focus, input[type="password"]:focus {
   .host-dashboard {
     flex-direction: column;
   }
+}
+
+/* Hero Banner Styles */
+.hero-banner {
+    text-align: center;
+}
+
+.game-title {
+    font-size: 3.5rem;
+    font-weight: 800;
+    color: var(--text-color); /* #ff4757 */
+    text-shadow: 3px 3px 0px rgba(0, 0, 0, 0.1);
+    margin-bottom: 0.5rem;
+}
+
+.game-tagline {
+    font-size: 1.25rem;
+    color: #57606f;
+    margin-bottom: 1.5rem;
+}
+
+/* Floating Cards Animation */
+.floating-card {
+    font-size: 4rem;
+    animation: float 3s ease-in-out infinite; 
+}
+
+/* Delay one of the elements */
+.power-card {
+    animation-delay: 1.5s; 
+}
+
+@keyframes float {
+    0% { transform: translateY(0); }
+    50% { transform: translateY(-15px) scale(1.1) rotate(5deg); }
+    100% { transform: translateY(0); }
 }

@@ -1,7 +1,15 @@
 extends layout
 
 block content
-  .dashboard-container
-    .action-buttons
-      a.btn.btn-large.btn-primary#create-session-btn(href="/create-session") Create Session
-      a.btn.btn-large.btn-secondary#join-session-btn(href="/join-session") Join Session
+  style.
+  .main-wrapper(style="display: flex; flex-direction: column; align-items: center; width: 100%; gap: 0.5rem;")
+    .hero-banner
+      .title-group(style="display: flex; align-items: center; justify-content: center; gap: 1rem;")
+        .floating-card.enemy-card 👾
+        h1.game-title(style="margin-bottom: 0;") Draw & Dare
+        .floating-card.power-card ⚡
+      p.game-tagline(style="text-align: center;") Will you draw a power card or face an enemy?
+    .dashboard-container
+      .action-buttons
+        a.btn.btn-large.btn-primary#create-session-btn(href="/create-session") Create Session
+        a.btn.btn-large.btn-secondary#join-session-btn(href="/join-session") Join Session
