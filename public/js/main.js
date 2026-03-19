@@ -59,25 +59,23 @@ function pollLobby() {
             }
         },
         complete: function() {
-            // Poll again after 2 seconds
             setTimeout(pollLobby, 2000);
         }
     });
 }
 
-// Start polling if we are on the lobby page
+// Start polling on the lobby page
 if (window.location.pathname === '/lobby') {
     pollLobby();
 }
 
 
 $(document).ready(function() {
-    
     // Handle Create Session Button Click
     $('#create-session-btn').on('click', function(e) {
         e.preventDefault();
 
-        // Disable button to prevent double-clicks
+        // to prevent double-clicks
         $(this).prop('disabled', true).text('Creating...');
 
         $.ajax({
@@ -102,7 +100,6 @@ $(document).ready(function() {
 
 
 $(document).ready(function() {
-    
     // Handle Join Session Form Submission
     $('#join-form').on('submit', function(e) {
         e.preventDefault();
@@ -110,7 +107,7 @@ $(document).ready(function() {
         const lobbyCode = $('#lobby-code').val().trim();
         const submitBtn = $(this).find('button[type="submit"]');
 
-        // Provide visual feedback and prevent multiple clicks
+        // Visual feedback and prevent multiple clicks
         submitBtn.prop('disabled', true).text('Joining...');
 
         $.ajax({
@@ -127,7 +124,7 @@ $(document).ready(function() {
             error: function(xhr) {
                 const res = xhr.responseJSON;
                 alert(res.message || 'Failed to join lobby.');
-                // Reset the button if there's an error so they can try again
+                // If there's an error so they can try again
                 submitBtn.prop('disabled', false).text('Join');
             }
         });
@@ -136,7 +133,7 @@ $(document).ready(function() {
 });
 
 $(document).ready(function() {
-    // Host Action: Start the Game
+    // Start the Game (Host)
     $('#start-game-btn').on('click', function(e) {
         e.preventDefault();
 
@@ -148,7 +145,7 @@ $(document).ready(function() {
             method: 'POST',
             success: function(response) {
                 if (response.success) {
-                    // The host redirects immediately; the players will follow via polling
+                    // Direct to Game
                     window.location.href = response.redirect;
                 }
             },
@@ -159,7 +156,7 @@ $(document).ready(function() {
         });
     });
 
-    // Host Action: End the Game
+    // End the Game (Host)
     $('#end-game-btn').on('click', function(e) {
         e.preventDefault();
         
@@ -191,7 +188,7 @@ $(document).ready(function() {
             url: '/api/lobby-status',
             method: 'GET',
             success: function(data) {
-                // Update the UI with new participants dynamically
+                // Update UI with new participants
                 const list = $('#participants-list');
                 list.empty();
                 
@@ -203,14 +200,13 @@ $(document).ready(function() {
                     list.append('<li>Waiting for players...</li>');
                 }
 
-                // If the host clicked start, the status changes to 'playing'
-                // This redirects all players currently sitting in the lobby
+                // redirects all players currently sitting in the lobby
                 if (data.status === 'playing') {
                     window.location.href = '/game'; 
                 }
             },
             complete: function() {
-                // Poll again after 2 seconds only if we are still on the lobby page
+                // Poll again if still on lobby page
                 if (window.location.pathname === '/lobby') {
                     setTimeout(pollLobby, 2000);
                 }
@@ -218,7 +214,7 @@ $(document).ready(function() {
         });
     }
 
-    // Initialize polling strictly on the lobby page
+    // Initialize polling on the lobby page
     if (window.location.pathname === '/lobby') {
         pollLobby();
     }

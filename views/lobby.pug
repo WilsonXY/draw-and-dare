@@ -7,7 +7,6 @@ block content
       .participants-section
         h2 Participants
         ul#participants-list.list-box
-          // Example dynamic rendering
           each player in players || []
             li= player.username
           if (!players || players.length === 0)

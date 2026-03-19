@@ -197,7 +197,7 @@ input[type="text"]:focus, input[type="password"]:focus {
   margin: auto;
 }
 
-/* Force direct text/titles to span full width and center */
+/* Force direct text & titles to span full width and center */
 .lobby-container > h1,
 .lobby-container > h2,
 .lobby-container > h3,
@@ -273,7 +273,7 @@ input[type="text"]:focus, input[type="password"]:focus {
   }
 }
 
-/* --- Host View (Desktop) --- */
+/* --- Host View --- */
 .host-dashboard {
   display: flex;
   flex-direction: row;
@@ -377,7 +377,7 @@ input[type="text"]:focus, input[type="password"]:focus {
   margin-top: auto;
 }
 
-/* --- Player View (Mobile) --- */
+/* --- Player View --- */
 .player-mobile-container {
   width: 100%;
   max-width: 400px;

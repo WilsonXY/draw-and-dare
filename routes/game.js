@@ -1,12 +1,12 @@
 const express = require('express');
 const router = express.Router();
 
-// In-memory store for currently active questions per lobby
+// In-memory store for currently active question
 const activeLobbyQuestions = {};
 
-// Helper to advance the turn sequentially
+// Helper to advance the turn
 async function advanceTurn(lobbyId, connection) {
-    delete activeLobbyQuestions[lobbyId]; // Clear any active question on turn advance
+    delete activeLobbyQuestions[lobbyId];
     const [lobby] = await connection.execute('SELECT current_turn_participant_id FROM Lobby WHERE lobby_id = ?', [lobbyId]);
     if (lobby.length === 0 || !lobby[0].current_turn_participant_id) return;
     
@@ -26,9 +26,8 @@ async function advanceTurn(lobbyId, connection) {
     }
 }
 
-// Start Game API (AJAX endpoint for the Host)
+// Start Game API (for the Host)
 router.post('/api/start-game', async (req, res) => {
-    // Ensure the requester is logged in, has an active lobby, and is the host
     if (!req.session.user || !req.session.currentLobbyId || !req.session.isHost) {
         return res.status(403).json({ success: false, message: 'Unauthorized. Only the host can start the game.' });
     }
@@ -41,7 +40,7 @@ router.post('/api/start-game', async (req, res) => {
         );
         const startingParticipantId = participants.length > 0 ? participants[0].participant_id : null;
 
-        // Update the lobby status to 'playing'
+        // Update lobby status to 'playing'
         const [result] = await req.db.execute(
             'UPDATE Lobby SET status = ?, current_turn_participant_id = ? WHERE lobby_id = ? AND host_user_id = ?',
             ['playing', startingParticipantId, req.session.currentLobbyId, req.session.user.user_id]
@@ -63,9 +62,8 @@ router.post('/api/start-game', async (req, res) => {
     }
 });
 
-// End Game API (AJAX endpoint for the Host)
+// End Game API (for the Host)
 router.post('/api/end-game', async (req, res) => {
-    // Ensure the requester is logged in, has an active lobby, and is the host
     if (!req.session.user || !req.session.currentLobbyId || !req.session.isHost) {
         return res.status(403).json({ success: false, message: 'Unauthorized. Only the host can end the game.' });
     }
@@ -73,7 +71,7 @@ router.post('/api/end-game', async (req, res) => {
     try {
         const lobbyId = req.session.currentLobbyId;
 
-        // Fetch final leaderboard before closing the game
+        // Fetch final leaderboard
         const [leaderboard] = await req.db.execute(`
             SELECT u.username, p.current_score 
             FROM Participants p 
@@ -82,7 +80,7 @@ router.post('/api/end-game', async (req, res) => {
             ORDER BY p.current_score DESC, p.score_updated_at ASC, p.participant_id ASC
         `, [lobbyId]);
 
-        // Update the lobby status to 'ended'
+        // Update the lobby status
         const [result] = await req.db.execute(
             'UPDATE Lobby SET status = ? WHERE lobby_id = ? AND host_user_id = ?',
             ['ended', lobbyId, req.session.user.user_id]
@@ -95,11 +93,10 @@ router.post('/api/end-game', async (req, res) => {
         // Store leaderboard in session to display on the final results page
         req.session.finalLeaderboard = leaderboard;
 
-        // Clear the active lobby from the host's session
+        // Clean up memory
         req.session.currentLobbyId = null;
         req.session.isHost = false;
         
-        // Clean up memory
         delete activeLobbyQuestions[lobbyId];
 
         res.status(200).json({ 
@@ -122,7 +119,7 @@ router.get('/final-results', (req, res) => {
 
     const leaderboard = req.session.finalLeaderboard || [];
     
-    // Clear it so it's only viewed once
+    // Clear it so only viewed once
     req.session.finalLeaderboard = null;
 
     res.render('final-results', { 
@@ -138,17 +135,17 @@ router.get('/game', async (req, res) => {
     }
 
     try {
-        // Verify the lobby is actually in the 'playing' state
+        // Verify lobby state
         const [lobbies] = await req.db.execute(
             'SELECT status FROM Lobby WHERE lobby_id = ?',
             [req.session.currentLobbyId]
         );
 
         if (lobbies.length === 0 || lobbies[0].status !== 'playing') {
-            return res.redirect('/lobby'); // Send them back if the game hasn't started or has ended
+            return res.redirect('/lobby'); // Send them back if the game hasnt started/has ended
         }
 
-        // Render the distinct views based on the user's role
+        // Render different views based on user's role
         if (req.session.isHost) {
             res.render('host-view', { user: req.session.user });
         } else {
@@ -161,9 +158,8 @@ router.get('/game', async (req, res) => {
     }
 });
 
-// Scan Card API (AJAX endpoint for the Player)
+// Scan Card API (for the Player)
 router.post('/api/scan-card', async (req, res) => {
-    // Ensure the requester is logged in and in an active game
     if (!req.session.user || !req.session.currentLobbyId) {
         return res.status(401).json({ success: false, message: 'Unauthorized or not in a game.' });
     }
@@ -181,7 +177,7 @@ router.post('/api/scan-card', async (req, res) => {
     try {
         await connection.beginTransaction();
 
-        // 1. Identify the Player's Participant ID
+        // Identify Player's Participant ID
         const [participants] = await connection.execute(
             'SELECT participant_id, active_effect_id FROM Participants WHERE lobby_id = ? AND user_id = ?',
             [lobbyId, userId]
@@ -194,14 +190,14 @@ router.post('/api/scan-card', async (req, res) => {
         const participantId = participants[0].participant_id;
         let activeEffectId = participants[0].active_effect_id;
 
-        // Verify it is the player's turn
+        // Verify it is player's turn
         const [lobby] = await connection.execute('SELECT current_turn_participant_id FROM Lobby WHERE lobby_id = ?', [lobbyId]);
         if (lobby.length > 0 && lobby[0].current_turn_participant_id !== participantId) {
             await connection.rollback();
             return res.status(403).json({ success: false, message: 'Wait for your turn to scan!' });
         }
 
-        // 2. Fetch the Card Details
+        // Fetch Card Details
         const [cards] = await connection.execute(
             'SELECT * FROM Cards WHERE qr_code_value = ?',
             [qrCodeValue]
@@ -215,13 +211,13 @@ router.post('/api/scan-card', async (req, res) => {
 
         let responsePayload = { success: true, cardType: card.card_type };
 
-        // 3. Process Logic Based on Card Type
+        // Process Logic Based on Card Type
         if (card.card_type === 'Empty Card') {
-            // Empty cards give safe points immediately
             let pointsEarned = 10; // Base points
             let consumedEffectId = null;
 
-            if (Number(activeEffectId) === 1) { // Double Score
+            // Double Score applied
+            if (Number(activeEffectId) === 1) { 
                 pointsEarned *= 2;
                 consumedEffectId = 1;
                 await connection.execute(
@@ -243,10 +239,10 @@ router.post('/api/scan-card', async (req, res) => {
             responsePayload.points = pointsEarned;
             responsePayload.message = `Safe draw! +${pointsEarned} points.`;
 
-            await advanceTurn(lobbyId, connection); // Turn over!
+            await advanceTurn(lobbyId, connection); // End turn
 
         } else if (card.card_type === 'Power Card') {
-            // Power cards apply a random effect to the user
+            // Apply a random effect
             const [effects] = await connection.execute(
                 'SELECT * FROM PowerEffects ORDER BY RAND() LIMIT 1'
             );
@@ -257,9 +253,9 @@ router.post('/api/scan-card', async (req, res) => {
             let pointsEarned = 0;
             let effectAddendum = '';
 
-            // point steal (3)
+            // Point Steal
             if (randomPowerEffectId === 3) {
-                activeEffectToSet = null; // Consume instantly
+                activeEffectToSet = null
 
                 const [leaderboard] = await connection.execute(
                     'SELECT participant_id, current_score FROM Participants WHERE lobby_id = ? ORDER BY current_score DESC, score_updated_at ASC, participant_id ASC',
@@ -298,10 +294,11 @@ router.post('/api/scan-card', async (req, res) => {
             responsePayload.effectName = effect.name;
             responsePayload.effectDescription = effect.description + effectAddendum;
 
-            await advanceTurn(lobbyId, connection); // Turn over!
+            await advanceTurn(lobbyId, connection); // End turn
 
         } else if (card.card_type === 'Enemy Card') {
-            if (Number(activeEffectId) === 2) { // Skip Enemy
+            // Skip Enemy applied
+            if (Number(activeEffectId) === 2) {
                 await connection.execute('UPDATE Participants SET active_effect_id = NULL WHERE participant_id = ?', [participantId]);
                 
                 pointsEarned = 10;
@@ -315,15 +312,14 @@ router.post('/api/scan-card', async (req, res) => {
                     [lobbyId, participantId, card.card_id, 2, pointsEarned]
                 );
 
-                // Re-route dynamically using empty card UI to show skip status
+                // Use empty card UI to show skip status
                 responsePayload.cardType = 'Empty Card';
                 responsePayload.points = pointsEarned;
                 responsePayload.message = `Enemy bypassed using your Skip power! +${pointsEarned} points.`;
                 
-                await advanceTurn(lobbyId, connection); // Turn over!
+                await advanceTurn(lobbyId, connection); // End turn
             } else {
-                // Enemy cards trigger a quiz. We don't award points yet.
-                // Fetch a random question from the database
+                // Fetch a random question
                 const [questions] = await connection.execute(
                     'SELECT question_id, question_text, option_a, option_b, option_c, option_d FROM Questions ORDER BY RAND() LIMIT 1'
                 );
@@ -334,14 +330,13 @@ router.post('/api/scan-card', async (req, res) => {
                     questionId: questions[0].question_id
                 };
                 
-                // Store the current question in memory for the host view to sync
+                // Store the current question in memory for host view to sync
                 activeLobbyQuestions[lobbyId] = {
                     question: questions[0],
                     username: req.session.user.username
                 };
 
                 responsePayload.question = questions[0];
-                // Do NOT advance turn yet, waiting for answer!
             }
         }
 
@@ -357,14 +352,13 @@ router.post('/api/scan-card', async (req, res) => {
     }
 });
 
-// Submit Answer API (AJAX endpoint for the Player)
+// Submit Answer API (for the Player)
 router.post('/api/submit-answer', async (req, res) => {
-    // Ensure the user is logged in, in a game, and currently has an active turn/question
     if (!req.session.user || !req.session.currentLobbyId || !req.session.currentTurn) {
         return res.status(400).json({ success: false, message: 'Invalid turn state.' });
     }
 
-    const { selectedOption } = req.body; // Expected: 'A', 'B', 'C', or 'D'
+    const { selectedOption } = req.body; // 'A', 'B', 'C', 'D'
     const userId = req.session.user.user_id;
     const lobbyId = req.session.currentLobbyId;
     const { questionId, cardId } = req.session.currentTurn;
@@ -378,7 +372,7 @@ router.post('/api/submit-answer', async (req, res) => {
     try {
         await connection.beginTransaction();
 
-        // 1. Get the Participant ID
+        // Get Participant ID
         const [participants] = await connection.execute(
             'SELECT participant_id, active_effect_id FROM Participants WHERE lobby_id = ? AND user_id = ?',
             [lobbyId, userId]
@@ -392,7 +386,7 @@ router.post('/api/submit-answer', async (req, res) => {
         const participantId = participants[0].participant_id;
         let activeEffectId = participants[0].active_effect_id;
 
-        // 2. Verify the Answer
+        // Verify answer
         const [questions] = await connection.execute(
             'SELECT correct_option FROM Questions WHERE question_id = ?',
             [questionId]
@@ -407,12 +401,10 @@ router.post('/api/submit-answer', async (req, res) => {
         let pointsEarned = 0;
         let consumedEffectId = null;
 
-        // 3. Calculate Points based on Assignment Rules
+        // Calculate points based on assignment rules
         if (isCorrect) {
-            // Enemy cards grant double the empty card's base points (10 * 2 = 20)
             pointsEarned = 20; 
-
-            // Check `activeEffectId` to apply Double Score before saving points
+            // Check `activeEffectId`
             if (Number(activeEffectId) === 1) { 
                 pointsEarned *= 2;
                 consumedEffectId = 1;
@@ -428,16 +420,16 @@ router.post('/api/submit-answer', async (req, res) => {
             );
         }
 
-        // 4. Log the Turn in GameLog
+        // Log the turn in GameLog
         await connection.execute(
             'INSERT INTO GameLog (lobby_id, participant_id, question_id, card_id, applied_effect_id, points_earned, is_correct) VALUES (?, ?, ?, ?, ?, ?, ?)',
             [lobbyId, participantId, questionId, cardId, consumedEffectId, pointsEarned, isCorrect]
         );
 
-        // 5. Clear the current turn from the session to prevent duplicate submissions
+        // Clear current turn from session (to prevent duplicate submissions)
         req.session.currentTurn = null;
 
-        await advanceTurn(lobbyId, connection); // Turn over!
+        await advanceTurn(lobbyId, connection); // End turn
 
         await connection.commit();
 
@@ -459,7 +451,6 @@ router.post('/api/submit-answer', async (req, res) => {
 
 // Host Dashboard Polling API
 router.get('/api/host-data', async (req, res) => {
-    // Ensure the requester is a logged-in host with an active game
     if (!req.session.user || !req.session.currentLobbyId || !req.session.isHost) {
         return res.status(403).json({ success: false, message: 'Unauthorized.' });
     }
@@ -467,7 +458,7 @@ router.get('/api/host-data', async (req, res) => {
     const lobbyId = req.session.currentLobbyId;
 
     try {
-        // 1. Fetch Leaderboard Data
+        // Fetch Leaderboard Data
         // Joins Participants with Users to get usernames, ordered by highest score
         const [leaderboard] = await req.db.execute(`
             SELECT u.username, p.current_score 
@@ -477,8 +468,8 @@ router.get('/api/host-data', async (req, res) => {
             ORDER BY p.current_score DESC, p.score_updated_at ASC, p.participant_id ASC
         `, [lobbyId]);
 
-        // 2. Fetch Game Log Data (Last 10 turns)
-        // Joins GameLog with Participants, Users, and Cards to generate human-readable events
+        // Fetch Game Log Data (the last 10 turns)
+        // Joins GameLog with Participants, Users and Cards
         const [logs] = await req.db.execute(`
             SELECT u.username, c.card_type, g.points_earned, g.is_correct, pe.name AS power_name
             FROM GameLog g 

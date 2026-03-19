@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 
-// Helper function to generate a random 6-digit code
+// To generate a random 6-digit code
 function generateLobbyCode() {
     return Math.floor(100000 + Math.random() * 900000).toString();
 }
@@ -14,7 +14,7 @@ router.get('/api/lobby-status', async (req, res) => {
             return res.status(400).json({ error: 'No active lobby' });
         }
 
-        // Fetch participants and lobby status from the database
+        // Fetch participants and lobby status
         const [participants] = await req.db.execute(
             `SELECT u.username FROM Participants p 
              JOIN Users u ON p.user_id = u.user_id 
@@ -51,9 +51,8 @@ router.get('/api/lobby-status', async (req, res) => {
     }
 });
 
-// Create Lobby API (AJAX endpoint)
+// Create Lobby API
 router.post('/api/create-lobby', async (req, res) => {
-    // Ensure the user is logged in
     if (!req.session.user) {
         return res.status(401).json({ success: false, message: 'Unauthorized. Please log in.' });
     }
@@ -61,13 +60,12 @@ router.post('/api/create-lobby', async (req, res) => {
     const hostUserId = req.session.user.user_id;
     let lobbyCode = generateLobbyCode();
     
-    // Get a dedicated connection from the pool for the transaction
     const connection = await req.db.getConnection();
 
     try {
         await connection.beginTransaction();
 
-        // Optional: Check if the code currently exists and is active
+        // Check if the code exists and is active
         let isUnique = false;
         while (!isUnique) {
             const [existing] = await connection.execute(
@@ -89,7 +87,7 @@ router.post('/api/create-lobby', async (req, res) => {
 
         const lobbyId = lobbyResult.insertId;
 
-        // Store lobby details and host status in the session
+        // Store lobby details and host status in session
         req.session.currentLobbyId = lobbyId;
         req.session.isHost = true;
 
@@ -106,7 +104,7 @@ router.post('/api/create-lobby', async (req, res) => {
         console.error('Create Lobby Error:', error);
         res.status(500).json({ success: false, message: 'Server error while creating lobby.' });
     } finally {
-        // Always release the connection back to the pool
+        // Release the connection back to the pool
         connection.release();
     }
 });
@@ -118,7 +116,7 @@ router.get('/lobby', async (req, res) => {
     }
 
     try {
-        // Fetch the lobby details to display the code to the host
+        // Fetch the lobby code to display (host view)
         const [lobbies] = await req.db.execute(
             'SELECT lobby_code FROM Lobby WHERE lobby_id = ?',
             [req.session.currentLobbyId]
@@ -139,9 +137,8 @@ router.get('/lobby', async (req, res) => {
     }
 });
 
-// Join Lobby API (AJAX endpoint)
+// Join Lobby API
 router.post('/api/join-lobby', async (req, res) => {
-    // Ensure the user is logged in
     if (!req.session.user) {
         return res.status(401).json({ success: false, message: 'Unauthorized. Please log in.' });
     }
@@ -154,7 +151,7 @@ router.post('/api/join-lobby', async (req, res) => {
     }
 
     try {
-        // Find the lobby using the provided code
+        // Find the lobby using provided code
         const [lobbies] = await req.db.execute(
             'SELECT lobby_id, status FROM Lobby WHERE lobby_code = ?',
             [lobbyCode]
@@ -166,18 +163,18 @@ router.post('/api/join-lobby', async (req, res) => {
 
         const lobby = lobbies[0];
 
-        // Prevent joining if the game has already started or ended
+        // Prevent joining game that has already started or ended
         if (lobby.status !== 'waiting') {
             return res.status(403).json({ success: false, message: 'This game has already started or ended.' });
         }
 
-        // Check if the user is already a participant in this specific lobby
+        // Check if the user is already a participant in the lobby
         const [existingParticipant] = await req.db.execute(
             'SELECT participant_id FROM Participants WHERE lobby_id = ? AND user_id = ?',
             [lobby.lobby_id, userId]
         );
 
-        // If they aren't already in the lobby, insert them into the Participants table
+        // Insert user into database
         if (existingParticipant.length === 0) {
             await req.db.execute(
                 'INSERT INTO Participants (lobby_id, user_id, current_score) VALUES (?, ?, ?)',
@@ -185,9 +182,9 @@ router.post('/api/join-lobby', async (req, res) => {
             );
         }
 
-        // Update the user's session with the current game context
+        // Update user's session with current game context
         req.session.currentLobbyId = lobby.lobby_id;
-        req.session.isHost = false; // Ensure they are recognized as a standard player
+        req.session.isHost = false; // As a player
 
         res.status(200).json({ 
             success: true, 

@@ -12,7 +12,7 @@ router.post('/api/signup', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Username and password are required.' });
         }
 
-        // Check if the username already exists
+        // Check if username already exists
         const [existingUsers] = await req.db.execute(
             'SELECT * FROM Users WHERE username = ?',
             [username]
@@ -22,11 +22,11 @@ router.post('/api/signup', async (req, res) => {
             return res.status(409).json({ success: false, message: 'Username already taken.' });
         }
 
-        // Hash the password securely with bcrypt
+        // Hash password with bcrypt
         const saltRounds = 5;
         const passwordHash = await bcrypt.hash(password, saltRounds);
 
-        // Insert the new user into the database
+        // Insert new user into the database
         const [result] = await req.db.execute(
             'INSERT INTO Users (username, password_hash) VALUES (?, ?)',
             [username, passwordHash]
@@ -68,7 +68,7 @@ router.post('/api/login', async (req, res) => {
             return res.status(401).json({ success: false, message: 'Invalid username or password.' });
         }
 
-        // Establish the session
+        // Establish session
         req.session.user = {
             user_id: user.user_id,
             username: user.username

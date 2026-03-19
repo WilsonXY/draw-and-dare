@@ -2,7 +2,7 @@ $(document).ready(function() {
     
     // Handle Login Form Submission
     $('#login-form').on('submit', function(e) {
-        e.preventDefault(); // Prevent default HTML form submission
+        e.preventDefault();
 
         const data = {
             username: $('#username').val(),
@@ -22,7 +22,6 @@ $(document).ready(function() {
             },
             error: function(xhr) {
                 const res = xhr.responseJSON;
-                // Display error message to the user (you can add a <div id="error-msg"> to your pug file)
                 alert(res.message || 'Login failed.');
             }
         });

@@ -6,18 +6,18 @@ block content
 
   .player-mobile-container
     
-    // State 1: Waiting Room
+    // Waiting Room
     #state-waiting.game-state.hidden
       .icon-placeholder(style="font-size: 3rem;") ⏳
       h2 Waiting for next turn...
       p Please wait while other players take their turn.
 
-    // State 2: QR Scanner
+    // QR Scanner
     #state-scanner.game-state.hidden
       h2 Scan the Code
       #reader
 
-    // State 3: Power Card Scanned
+    // Power Card Scanned
     #state-power-card.game-state.hidden
       .card-display.power-card
         h2 Congrats!
@@ -25,7 +25,7 @@ block content
         p#power-description power card description
       button.btn.btn-primary#btn-power-ok OK
 
-    // State 4: Enemy Card Scanned (Quiz)
+    // Enemy Card Scanned
     #state-enemy-card.game-state.hidden
       .card-display.enemy-card
         .question-box
@@ -35,7 +35,7 @@ block content
           button.btn.btn-answer (Answers)
           button.btn.btn-answer (Answers)
 
-    // State 5: Empty Card Scanned
+    // Empty Card Scanned
     #state-empty-card.game-state.hidden
       .card-display.empty-card
         h2 Empty Card!
@@ -43,7 +43,7 @@ block content
         p#empty-points-granted .... points granted
       button.btn.btn-primary#btn-empty-ok OK
 
-    // State 6: Game Ended
+    // Game Ended
     #state-game-ended.game-state.hidden
       h2 Game Ended!
       .icon-placeholder(style="font-size: 3rem;") 🏁

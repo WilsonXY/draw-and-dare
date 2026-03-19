@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 
-// Standard Page Routes (UI Rendering)
+// Page Routes (UI Rendering)
 router.get('/', (req, res) => {
     if (req.session.user) {
         res.render('main');

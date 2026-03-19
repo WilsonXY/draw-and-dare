@@ -23,7 +23,7 @@ html(lang="en")
         h1.logo: a(href="/" style="text-decoration: none; color: inherit;") Draw&Dare
         .user-info #{user.username}
     else
-      // Simple header for logged out users
+      // Header for logged out users
       header.top-nav.centered
         h1.logo Draw&Dare
 
@@ -31,7 +31,7 @@ html(lang="en")
     main.container
       block content
 
-    // Change Password Modal (Hidden by default)
+    // Change Password Modal (hidden by default)
     #password-modal.modal.hidden
       .modal-content
         h2 Change Password

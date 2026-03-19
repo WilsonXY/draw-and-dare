@@ -1,7 +1,6 @@
 extends layout
 
 block content
-  // Include html5-qrcode for QR scanning
   script(src="https://unpkg.com/html5-qrcode")
 
   .join-container
@@ -19,7 +18,7 @@ block content
       // Placeholder for future QR scanning functionality
       button.btn.btn-secondary(type="button" id="scan-qr-btn") Scan QR Code
 
-    // Container for the QR Scanner
+    // Container for QR Scanner
     #qr-reader-container(style="display: none; margin-top: 2rem;")
       #reader
       button.btn.btn-secondary(type="button" id="close-scanner-btn" style="margin-top: 1rem;") Back
