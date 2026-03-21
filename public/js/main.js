@@ -103,6 +103,12 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+
+  // Relocate BGM container to the body to prevent CSS animation containing block conflicts
+  const bgmContainer = document.getElementById('bgm-container');
+  if (bgmContainer) {
+    document.body.appendChild(bgmContainer);
+  }
 });
 
 function pollLobby() {
@@ -147,7 +153,7 @@ $(document).ready(function() {
             success: function(response) {
                 if (response.success) {
                     $('#create-session-btn').prop('disabled', false).text('Create Session'); // Set back to original status
-                    // Redirect the player to the waiting room
+                    // Redirect to the newly created lobby
                     window.location.href = response.redirect;
                 }
             },
@@ -180,7 +186,7 @@ $(document).ready(function() {
             data: JSON.stringify({ lobbyCode: lobbyCode }),
             success: function(response) {
                 if (response.success) {
-                    // Redirect to the newly created lobby
+                    // Redirect the player to the waiting room
                     window.location.href = response.redirect;
                 }
             },

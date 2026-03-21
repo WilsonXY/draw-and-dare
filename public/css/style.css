@@ -103,6 +103,7 @@ body {
   border: var(--box-border);
   border-radius: 12px;
   box-shadow: 6px 6px 0 rgba(0,0,0,0.1);
+  animation: popOut 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
 .auth-links{
@@ -159,12 +160,14 @@ input[type="text"]:focus, input[type="password"]:focus {
 
 .btn-primary { 
   background-color: var(--primary-color); 
-  color: #fff; 
+  color: #fff;
+  animation: popOut 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
 .btn-secondary { 
   background-color: var(--accent-color); 
-  color: var(--text-color); 
+  color: var(--text-color);
+  animation: popOut 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
 .btn-large { 
@@ -190,6 +193,7 @@ input[type="text"]:focus, input[type="password"]:focus {
   text-align: center; 
   max-width: 400px; 
   width: 100%;
+  animation: popOut 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
 /* --- Lobby Layout --- */
@@ -201,6 +205,7 @@ input[type="text"]:focus, input[type="password"]:focus {
   max-width: 800px;
   gap: 2rem;
   margin: auto;
+  animation: popOut 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
 /* Force direct text & titles to span full width and center */
@@ -293,6 +298,7 @@ input[type="text"]:focus, input[type="password"]:focus {
   width: 100%;
   max-width: 1200px;
   align-self: stretch;
+  animation: popOut 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
 .question-board-container, .leaderboard-container {
@@ -399,6 +405,7 @@ input[type="text"]:focus, input[type="password"]:focus {
   justify-content: center;
   align-items: center;
   text-align: center;
+  animation: popOut 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
 .game-state {
@@ -495,6 +502,7 @@ input[type="text"]:focus, input[type="password"]:focus {
   background-color: #fff;
   margin-bottom: 1rem;
   box-shadow: 4px 4px 0 rgba(0,0,0,0.1);
+  animation: popOut 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
 .question-text {
@@ -522,9 +530,10 @@ input[type="text"]:focus, input[type="password"]:focus {
   color: var(--primary-color);
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+@keyframes popOut {
+  0% { transform: scale(0.8); opacity: 0; }
+  70% { transform: scale(1.05); opacity: 1; }
+  100% { transform: none; opacity: 1; }
 }
 
 /* --- Host View Responsiveness --- */
@@ -576,7 +585,7 @@ input[type="text"]:focus, input[type="password"]:focus {
 }
 
 /* Delay one of the elements */
-.power-card {
+.floating-card.power-card {
     animation-delay: 1.5s; 
 }
 
@@ -589,8 +598,8 @@ input[type="text"]:focus, input[type="password"]:focus {
 /* --- Global BGM Player --- */
 #bgm-container {
     position: fixed;
-    bottom: 20px;
-    right: 20px;
+    bottom: 15px;
+    left: 12px;
     z-index: 9999;
     display: flex;
     align-items: center;
