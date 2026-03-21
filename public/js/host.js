@@ -8,7 +8,7 @@ $(document).ready(function() {
                 const utterance = new SpeechSynthesisUtterance(textToRead);
                 window.speechSynthesis.speak(utterance);
             } else {
-                alert("Text-to-speech is not supported in this browser.");
+                showAlert("Text-to-speech is not supported in this browser.");
             }
         });
 

@@ -1,3 +1,66 @@
+// Show Alert Modal
+function showAlert(message, callback) {
+    let modal = $('#custom-alert-modal');
+    if (modal.length === 0) {
+        const modalHtml = `
+            <div id="custom-alert-modal" class="modal" style="display: none;">
+                <div class="modal-content">
+                    <p id="custom-alert-message"></p>
+                    <button id="custom-alert-ok" class="btn btn-primary">OK</button>
+                </div>
+            </div>
+        `;
+        $('body').append(modalHtml);
+        modal = $('#custom-alert-modal');
+
+        $('#custom-alert-ok').on('click', function() {
+            modal.css('display', 'none');
+            if (typeof modal.data('callback') === 'function') {
+                modal.data('callback')();
+            }
+        });
+    }
+    
+    $('#custom-alert-message').text(message);
+    modal.data('callback', callback); // Save the callback function if provided
+    modal.css('display', 'flex');
+}
+
+// Show Confirm Modal
+function showConfirm(message, onConfirm) {
+    let modal = $('#custom-confirm-modal');
+    if (modal.length === 0) {
+        const modalHtml = `
+            <div id="custom-confirm-modal" class="modal" style="display: none;">
+                <div class="modal-content">
+                    <p id="custom-confirm-message" style="margin-bottom: 1.5rem; font-size: 1.2rem; font-weight: bold;"></p>
+                    <div style="display: flex; gap: 10px; justify-content: center;">
+                        <button id="custom-confirm-yes" class="btn btn-primary">Yes</button>
+                        <button id="custom-confirm-no" class="btn btn-secondary">No</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        $('body').append(modalHtml);
+        modal = $('#custom-confirm-modal');
+
+        $('#custom-confirm-yes').on('click', function() {
+            modal.css('display', 'none');
+            if (typeof modal.data('onConfirm') === 'function') {
+                modal.data('onConfirm')();
+            }
+        });
+
+        $('#custom-confirm-no').on('click', function() {
+            modal.css('display', 'none');
+        });
+    }
+    
+    $('#custom-confirm-message').text(message);
+    modal.data('onConfirm', onConfirm);
+    modal.css('display', 'flex');
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   // Sidebar Toggle
   const menuBtn = document.getElementById('menu-toggle');
@@ -90,7 +153,7 @@ $(document).ready(function() {
             },
             error: function(xhr) {
                 const res = xhr.responseJSON;
-                alert(res.message || 'Failed to create lobby.');
+                showAlert(res.message || 'Failed to create lobby.');
                 $('#create-session-btn').prop('disabled', false).text('Create Session');
             }
         });
@@ -123,7 +186,7 @@ $(document).ready(function() {
             },
             error: function(xhr) {
                 const res = xhr.responseJSON;
-                alert(res.message || 'Failed to join lobby.');
+                showAlert(res.message || 'Failed to join lobby.');
                 // If there's an error so they can try again
                 submitBtn.prop('disabled', false).text('Join');
             }
@@ -150,7 +213,7 @@ $(document).ready(function() {
                 }
             },
             error: function(xhr) {
-                alert(xhr.responseJSON?.message || 'Failed to start the game.');
+                showAlert(xhr.responseJSON?.message || 'Failed to start the game.');
                 btn.prop('disabled', false).text('Start!');
             }
         });
@@ -160,25 +223,24 @@ $(document).ready(function() {
     $('#end-game-btn').on('click', function(e) {
         e.preventDefault();
         
-        if (!confirm('Are you sure you want to end this game?')) {
-            return;
-        }
-
         const btn = $(this);
-        btn.prop('disabled', true).text('Ending...');
 
-        $.ajax({
-            url: '/api/end-game',
-            method: 'POST',
-            success: function(response) {
-                if (response.success) {
-                    window.location.href = response.redirect;
+        showConfirm('Are you sure you want to end this game?', function() {
+            btn.prop('disabled', true).text('Ending...');
+
+            $.ajax({
+                url: '/api/end-game',
+                method: 'POST',
+                success: function(response) {
+                    if (response.success) {
+                        window.location.href = response.redirect;
+                    }
+                },
+                error: function(xhr) {
+                    showAlert(xhr.responseJSON?.message || 'Failed to end the game.');
+                    btn.prop('disabled', false).text('End Game');
                 }
-            },
-            error: function(xhr) {
-                alert(xhr.responseJSON?.message || 'Failed to end the game.');
-                btn.prop('disabled', false).text('End Game');
-            }
+            });
         });
     });
 

@@ -262,6 +262,12 @@ input[type="text"]:focus, input[type="password"]:focus {
 }
 .modal-content input { margin-bottom: 1rem; }
 
+#custom-alert-message {
+  margin-bottom: 1.5rem;
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
 /* --- Responsive Media Queries --- */
 @media (max-width: 768px) {
   .lobby-container {

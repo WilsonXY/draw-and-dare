@@ -22,7 +22,7 @@ $(document).ready(function() {
             },
             error: function(xhr) {
                 const res = xhr.responseJSON;
-                alert(res.message || 'Login failed.');
+                showAlert(res.message || 'Login failed.');
             }
         });
     });
@@ -43,13 +43,14 @@ $(document).ready(function() {
             data: JSON.stringify(data),
             success: function(response) {
                 if (response.success) {
-                    alert(response.message);
-                    window.location.href = '/login'; // Redirect to login page
+                    showAlert(response.message, function() {
+                        window.location.href = '/login'; // Redirect to login page
+                    });
                 }
             },
             error: function(xhr) {
                 const res = xhr.responseJSON;
-                alert(res.message || 'Signup failed.');
+                showAlert(res.message || 'Signup failed.');
             }
         });
     });
@@ -81,7 +82,7 @@ $(document).ready(function() {
         const newPassword = $('#new-password').val();
 
         if (!newPassword || newPassword.trim() === '') {
-            alert('Please enter a new password.');
+            showAlert('Please enter a new password.');
             return;
         }
 
@@ -92,16 +93,16 @@ $(document).ready(function() {
             data: JSON.stringify({ newPassword: newPassword }),
             success: function(response) {
                 if (response.success) {
-                    alert(response.message);
+                    showAlert(response.message);
                     $('#password-modal').addClass('hidden');
                     $('#new-password').val('');
                 } else {
-                    alert(response.message || 'Error changing password');
+                    showAlert(response.message || 'Error changing password');
                 }
             },
             error: function(xhr) {
                 const res= xhr.responseJSON;
-                alert(res && res.message ? res.message: 'Server error. Please try again later.');
+                showAlert(res && res.message ? res.message: 'Server error. Please try again later.');
             }
         });
     });

@@ -103,7 +103,7 @@ $(document).ready(function() {
                 }
             },
             error: function(xhr) {
-                alert(xhr.responseJSON?.message || 'Error processing card.');
+                showAlert(xhr.responseJSON?.message || 'Error processing card.');
                 // Return to scanner to try again
                 showGameState('state-scanner');
             }
@@ -142,9 +142,9 @@ $(document).ready(function() {
                 if (response.success) {
                     // Display result
                     if (response.isCorrect) {
-                        alert(`Correct! You earned ${response.pointsEarned} points!`);
+                        showAlert(`Correct! You earned ${response.pointsEarned} points!`);
                     } else {
-                        alert('Incorrect! Better luck next time.');
+                        showAlert('Incorrect! Better luck next time.');
                     }
                     
                     // Return to scanner state
@@ -155,7 +155,7 @@ $(document).ready(function() {
                 }
             },
             error: function(xhr) {
-                alert(xhr.responseJSON?.message || 'Error submitting answer.');
+                showAlert(xhr.responseJSON?.message || 'Error submitting answer.');
                 $('#state-enemy-card .btn-answer').prop('disabled', false);
             }
         });
@@ -172,8 +172,9 @@ $(document).ready(function() {
             method: 'GET',
             success: function(data) {
                 if (data.status === 'ended') {
-                    alert('The host has ended the game.');
-                    window.location.href = '/';
+                    showAlert('The host has ended the game.', function() {
+                        window.location.href = '/';
+                    });
                 } else if (window.location.pathname === '/game') {
                     window.isMyTurn = data.isMyTurn;
 
