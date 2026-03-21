@@ -1,5 +1,52 @@
 $(document).ready(function() {
     if ($('.host-dashboard').length > 0) {
+        
+        // BGM Player Setup
+        let bgmStarted = false;
+        const bgmAudio = document.getElementById('bgm-audio');
+        const bgmBtn = document.getElementById('bgm-toggle-btn');
+        const bgmSlider = document.getElementById('bgm-volume-slider');
+
+        bgmAudio.volume = bgmSlider.value;
+
+        // Attempt to autoplay immediately
+        const playPromise = bgmAudio.play();
+        if (playPromise !== undefined) {
+            playPromise.then(() => {
+                bgmStarted = true;
+            }).catch(e => {
+                console.log('BGM autoplay prevented by browser. Muting audio.');
+                bgmAudio.muted = true;
+                bgmBtn.innerText = '🔇';
+                
+                // Fallback: wait for the user to interact with the document
+                $(document).one('click', function() {
+                    if (!bgmStarted) {
+                        bgmAudio.play().catch(err => console.log('Playback error:', err));
+                        bgmStarted = true;
+                    }
+                });
+            });
+        }
+        // Mute / Unmute Toggle
+        $('#bgm-toggle-btn').on('click', function(e) {
+            e.stopPropagation();
+            bgmAudio.muted = !bgmAudio.muted;
+            bgmBtn.innerText = bgmAudio.muted ? '🔇' : '🔊';
+            
+            if (!bgmStarted) {
+                bgmAudio.play().catch(e => console.log('Playback error:', e));
+                bgmStarted = true;
+            }
+        });
+        // Volume Slider Adjustment
+        $('#bgm-volume-slider').on('input', function(e) {
+            e.stopPropagation();
+            bgmAudio.volume = $(this).val();
+            bgmAudio.muted = (bgmAudio.volume == 0);
+            bgmBtn.innerText = bgmAudio.muted ? '🔇' : '🔊';
+        });
+
         // Event delegation for text-to-speech button
         $(document).on('click', '#read-question-btn', function() {
             const textToRead = $(this).attr('data-question');
