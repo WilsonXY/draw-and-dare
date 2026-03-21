@@ -147,7 +147,7 @@ $(document).ready(function() {
             success: function(response) {
                 if (response.success) {
                     $('#create-session-btn').prop('disabled', false).text('Create Session'); // Set back to original status
-                    // Redirect to the newly created lobby
+                    // Redirect the player to the waiting room
                     window.location.href = response.redirect;
                 }
             },
@@ -180,7 +180,7 @@ $(document).ready(function() {
             data: JSON.stringify({ lobbyCode: lobbyCode }),
             success: function(response) {
                 if (response.success) {
-                    // Redirect the player to the waiting room
+                    // Redirect to the newly created lobby
                     window.location.href = response.redirect;
                 }
             },

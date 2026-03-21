@@ -179,6 +179,12 @@ input[type="text"]:focus, input[type="password"]:focus {
   margin-top: 1rem; 
 }
 
+.btn-back {
+  background-color: var(--secondary-color);
+  color: #202e3b;
+  margin-top: 1rem;
+}
+
 /* --- Join-Session Layout --- */
 .join-container {
   text-align: center; 
