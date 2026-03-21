@@ -7,6 +7,7 @@ $(document).ready(function() {
         const bgmBtn = document.getElementById('bgm-toggle-btn');
         const bgmSlider = document.getElementById('bgm-volume-slider');
 
+        bgmSlider.value = 0.02;
         bgmAudio.volume = bgmSlider.value;
 
         // Attempt to autoplay immediately
