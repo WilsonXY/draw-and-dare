@@ -1,5 +1,17 @@
 $(document).ready(function() {
     if ($('.host-dashboard').length > 0) {
+        // Event delegation for text-to-speech button
+        $(document).on('click', '#read-question-btn', function() {
+            const textToRead = $(this).attr('data-question');
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel(); // Stop any currently playing speech
+                const utterance = new SpeechSynthesisUtterance(textToRead);
+                window.speechSynthesis.speak(utterance);
+            } else {
+                alert("Text-to-speech is not supported in this browser.");
+            }
+        });
+
         function pollHostData() {
             $.ajax({
                 url: '/api/host-data',
@@ -51,7 +63,15 @@ $(document).ready(function() {
                         // Update the Question Board
                         if (response.activeQuestion) {
                             const qInfo = response.activeQuestion.question;
-                            $('#current-question').text(qInfo.question_text);
+                            
+                            const readBtn = $('<button>')
+                                .attr('id', 'read-question-btn')
+                                .attr('title', 'Read question aloud')
+                                .attr('data-question', qInfo.question_text)
+                                .css({ background: 'none', border: 'none', cursor: 'pointer', fontSize: 'inherit' })
+                                .text('🔊');
+                                
+                            $('#current-question').empty().text(qInfo.question_text + ' ').append(readBtn);
                             $('#active-player-name').text(response.activeQuestion.username);
                             
                             const optionsList = $('#current-options');
