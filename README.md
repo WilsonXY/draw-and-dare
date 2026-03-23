@@ -1,5 +1,5 @@
 # 🎨 Draw and Dare
-
+<img width="1148" height="782" alt="image" src="https://github.com/user-attachments/assets/6fde505d-9e22-4da3-a288-db36fae5870e" />
 Draw and Dare is an interactive web-based multiplayer game where players can join lobbies, draw, and participate in fun dares! Built using Node.js, Express, and MySQL.
 
 ## 🚀 Features
