@@ -48,6 +48,44 @@ $(document).ready(function() {
             bgmBtn.innerText = bgmAudio.muted ? '🔇' : '🔊';
         });
 
+        let currentTurnId = null;
+        let turnStartTime = Date.now();
+        // Check every second if 10 seconds have passed since the turn started
+        setInterval(function() {
+            if (currentTurnId && (Date.now() - turnStartTime > 10000)) {
+                $('#skip-turn-btn').show();
+            } else {
+                $('#skip-turn-btn').hide();
+            }
+        }, 1000);
+
+        // Handle Skip Turn button click
+        $(document).on('click', '#skip-turn-btn', function(e) {
+            e.preventDefault();
+            
+            const btn = $(this);
+
+            showConfirm('Are you sure you want to skip the current player\'s turn? This is for when a player disconnects and cannot continue.', function() {
+                btn.prop('disabled', true).text('Skipping...');
+
+                $.ajax({
+                    url: '/api/skip-turn',
+                    method: 'POST',
+                    success: function(response) {
+                        showAlert(response.message || 'Turn has been skipped.');
+                        turnStartTime = Date.now();
+                        $('#skip-turn-btn').hide();
+                    },
+                    error: function(xhr) {
+                        showAlert(xhr.responseJSON?.message || 'Failed to skip the turn.');
+                    },
+                    complete: function() {
+                        btn.prop('disabled', false).text('Skip Current Turn');
+                    }
+                });
+            });
+        });
+
         // Event delegation for text-to-speech button
         $(document).on('click', '#read-question-btn', function() {
             const textToRead = $(this).attr('data-question');
@@ -67,6 +105,13 @@ $(document).ready(function() {
                 success: function(response) {
                     if (response.success) {
                         
+                        // Update turn tracking
+                        if (response.currentTurnParticipantId !== currentTurnId) {
+                            currentTurnId = response.currentTurnParticipantId;
+                            turnStartTime = Date.now();
+                            $('#skip-turn-btn').hide();
+                        }
+
                         // Update the Leaderboard
                         const rankingBody = $('#ranking-body');
                         rankingBody.empty();

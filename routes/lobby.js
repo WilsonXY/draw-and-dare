@@ -163,23 +163,27 @@ router.post('/api/join-lobby', async (req, res) => {
 
         const lobby = lobbies[0];
 
-        // Prevent joining game that has already started or ended
-        if (lobby.status !== 'waiting') {
-            return res.status(403).json({ success: false, message: 'This game has already started or ended.' });
-        }
-
         // Check if the user is already a participant in the lobby
         const [existingParticipant] = await req.db.execute(
             'SELECT participant_id FROM Participants WHERE lobby_id = ? AND user_id = ?',
             [lobby.lobby_id, userId]
         );
 
-        // Insert user into database
-        if (existingParticipant.length === 0) {
-            await req.db.execute(
-                'INSERT INTO Participants (lobby_id, user_id, current_score) VALUES (?, ?, ?)',
-                [lobby.lobby_id, userId, 0] // Starting score is 0
-            );
+        if (lobby.status === 'waiting') {
+            // If lobby is waiting, anyone can join. If they are not already a participant, add them.
+            if (existingParticipant.length === 0) {
+                await req.db.execute(
+                    'INSERT INTO Participants (lobby_id, user_id, current_score) VALUES (?, ?, ?)',
+                    [lobby.lobby_id, userId, 0] // Starting score is 0
+                );
+            }
+        } else if (lobby.status === 'playing') {
+            // If game is playing, only existing participants can "re-join".
+            if (existingParticipant.length === 0) {
+                return res.status(403).json({ success: false, message: 'This game is in progress and you are not a participant.' });
+            }
+        } else { // 'ended' or other statuses
+            return res.status(403).json({ success: false, message: 'This game has already ended and cannot be joined.' });
         }
 
         // Update user's session with current game context

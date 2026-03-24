@@ -115,6 +115,41 @@ router.post('/api/end-game', async (req, res) => {
     }
 });
 
+// Skip Turn API (for the Host)
+router.post('/api/skip-turn', async (req, res) => {
+    if (!req.session.user || !req.session.currentLobbyId || !req.session.isHost) {
+        return res.status(403).json({ success: false, message: 'Unauthorized. Only the host can skip a turn.' });
+    }
+
+    const lobbyId = req.session.currentLobbyId;
+    const connection = await req.db.getConnection();
+
+    try {
+        await connection.beginTransaction();
+
+        // Get the current turn participant to ensure there is a turn to skip
+        const [lobby] = await connection.execute('SELECT current_turn_participant_id FROM Lobby WHERE lobby_id = ?', [lobbyId]);
+        if (lobby.length === 0 || !lobby[0].current_turn_participant_id) {
+            await connection.rollback();
+            return res.status(400).json({ success: false, message: 'No active turn to skip.' });
+        }
+
+        // Advance the turn
+        await advanceTurn(lobbyId, connection);
+
+        await connection.commit();
+
+        res.status(200).json({ success: true, message: 'Turn skipped.' });
+
+    } catch (error) {
+        await connection.rollback();
+        console.error('Skip Turn Error:', error);
+        res.status(500).json({ success: false, message: 'Server error while skipping turn.' });
+    } finally {
+        connection.release();
+    }
+});
+
 // Final Results Page
 router.get('/final-results', (req, res) => {
     if (!req.session.user) {
@@ -347,6 +382,9 @@ router.get('/api/host-data', async (req, res) => {
     const lobbyId = req.session.currentLobbyId;
 
     try {
+        // Fetch Lobby Info for current turn
+        const [lobbyInfo] = await req.db.execute('SELECT current_turn_participant_id FROM Lobby WHERE lobby_id = ?', [lobbyId]);
+
         // Fetch Leaderboard Data
         // Joins Participants with Users to get usernames, ordered by highest score
         const [leaderboard] = await req.db.execute(`
@@ -375,7 +413,8 @@ router.get('/api/host-data', async (req, res) => {
             success: true, 
             leaderboard: leaderboard, 
             logs: logs,
-            activeQuestion: activeLobbyQuestions[lobbyId] || null
+            activeQuestion: activeLobbyQuestions[lobbyId] || null,
+            currentTurnParticipantId: lobbyInfo.length > 0 ? lobbyInfo[0].current_turn_participant_id : null
         });
 
     } catch (error) {
