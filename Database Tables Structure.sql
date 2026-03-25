@@ -1,5 +1,5 @@
 -- CREATE DATABASE IF NOT EXISTS DrawAndDare;
-USE DrawAndDare;
+USE drawanddare;
 
 CREATE TABLE `Users` (
   `user_id` int PRIMARY KEY AUTO_INCREMENT,
