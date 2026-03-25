@@ -153,7 +153,7 @@ router.post('/api/join-lobby', async (req, res) => {
     try {
         // Find the lobby using provided code
         const [lobbies] = await req.db.execute(
-            'SELECT lobby_id, status FROM Lobby WHERE lobby_code = ?',
+            'SELECT lobby_id, status, host_user_id FROM Lobby WHERE lobby_code = ?',
             [lobbyCode]
         );
 
@@ -162,6 +162,7 @@ router.post('/api/join-lobby', async (req, res) => {
         }
 
         const lobby = lobbies[0];
+        const isHost = lobby.host_user_id === userId;
 
         // Check if the user is already a participant in the lobby
         const [existingParticipant] = await req.db.execute(
@@ -170,16 +171,16 @@ router.post('/api/join-lobby', async (req, res) => {
         );
 
         if (lobby.status === 'waiting') {
-            // If lobby is waiting, anyone can join. If they are not already a participant, add them.
-            if (existingParticipant.length === 0) {
+            // If lobby is waiting, anyone can join. If they are not already a participant and not the host, add them.
+            if (!isHost && existingParticipant.length === 0) {
                 await req.db.execute(
                     'INSERT INTO Participants (lobby_id, user_id, current_score) VALUES (?, ?, ?)',
                     [lobby.lobby_id, userId, 0] // Starting score is 0
                 );
             }
         } else if (lobby.status === 'playing') {
-            // If game is playing, only existing participants can "re-join".
-            if (existingParticipant.length === 0) {
+            // If game is playing, only existing participants or the host can "re-join".
+            if (!isHost && existingParticipant.length === 0) {
                 return res.status(403).json({ success: false, message: 'This game is in progress and you are not a participant.' });
             }
         } else { // 'ended' or other statuses
@@ -188,12 +189,12 @@ router.post('/api/join-lobby', async (req, res) => {
 
         // Update user's session with current game context
         req.session.currentLobbyId = lobby.lobby_id;
-        req.session.isHost = false; // As a player
+        req.session.isHost = isHost; 
 
         res.status(200).json({ 
             success: true, 
             message: 'Joined lobby successfully!', 
-            redirect: '/lobby' 
+            redirect: lobby.status === 'playing' ? '/game' : '/lobby' 
         });
 
     } catch (error) {
