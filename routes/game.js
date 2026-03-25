@@ -176,7 +176,7 @@ router.get('/game', async (req, res) => {
     try {
         // Verify lobby state
         const [lobbies] = await req.db.execute(
-            'SELECT status FROM Lobby WHERE lobby_id = ?',
+            'SELECT status, lobby_code FROM Lobby WHERE lobby_id = ?',
             [req.session.currentLobbyId]
         );
 
@@ -186,7 +186,7 @@ router.get('/game', async (req, res) => {
 
         // Render different views based on user's role
         if (req.session.isHost) {
-            res.render('host-view', { user: req.session.user });
+            res.render('host-view', { user: req.session.user, lobby_code: lobbies[0].lobby_code });
         } else {
             res.render('player-game', { user: req.session.user });
         }

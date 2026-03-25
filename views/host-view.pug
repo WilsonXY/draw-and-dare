@@ -2,7 +2,11 @@ extends layout
 
 block content
   .host-dashboard
-    // Top Section: Currently Answering Player (Question Board)
+    // Lobby Code
+    .lobby-code-container
+      h2 Lobby Code: #{lobby_code}
+
+    // Question Board: (Currently Answering Player)
     .question-board-container
       h2.question-board-title Question Board
       .question-display
@@ -13,7 +17,7 @@ block content
       p.answering-status Answering by: 
         span#active-player-name ...
 
-    // Bottom/Side Section: Leaderboard
+    // Leaderboard
     .leaderboard-container
       h2 Players Ranking
       table.ranking-table
