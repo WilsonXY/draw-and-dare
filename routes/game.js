@@ -1,34 +1,8 @@
 const express = require('express');
 const router = express.Router();
+const TurnEngine = require('../lib/turn-engine');
 
-const processEmptyCard = require('./card-handlers/empty-card');
-const processPowerCard = require('./card-handlers/power-card');
-const processEnemyCard = require('./card-handlers/enemy-card');
-
-// In-memory store for currently active question
-const activeLobbyQuestions = {};
-
-// Helper to advance the turn
-async function advanceTurn(lobbyId, connection) {
-    delete activeLobbyQuestions[lobbyId];
-    const [lobby] = await connection.execute('SELECT current_turn_participant_id FROM Lobby WHERE lobby_id = ?', [lobbyId]);
-    if (lobby.length === 0 || !lobby[0].current_turn_participant_id) return;
-    
-    const currentId = lobby[0].current_turn_participant_id;
-    const [participants] = await connection.execute('SELECT participant_id FROM Participants WHERE lobby_id = ? ORDER BY participant_id ASC', [lobbyId]);
-    
-    if (participants.length > 0) {
-        let nextIndex = 0;
-        for (let i = 0; i < participants.length; i++) {
-            if (participants[i].participant_id === currentId) {
-                nextIndex = (i + 1) % participants.length;
-                break;
-            }
-        }
-        const nextId = participants[nextIndex].participant_id;
-        await connection.execute('UPDATE Lobby SET current_turn_participant_id = ? WHERE lobby_id = ?', [nextId, lobbyId]);
-    }
-}
+const turnEngine = new TurnEngine();
 
 // Start Game API (for the Host)
 router.post('/api/start-game', async (req, res) => {
@@ -101,7 +75,7 @@ router.post('/api/end-game', async (req, res) => {
         req.session.currentLobbyId = null;
         req.session.isHost = false;
         
-        delete activeLobbyQuestions[lobbyId];
+        turnEngine.clearLobby(lobbyId);
 
         res.status(200).json({ 
             success: true, 
@@ -135,7 +109,7 @@ router.post('/api/skip-turn', async (req, res) => {
         }
 
         // Advance the turn
-        await advanceTurn(lobbyId, connection);
+        await turnEngine.advanceTurn(connection, lobbyId);
 
         await connection.commit();
 
@@ -248,24 +222,22 @@ router.post('/api/scan-card', async (req, res) => {
         }
         const card = cards[0];
 
-        let responsePayload = { success: true, cardType: card.card_type };
+        const outcome = await turnEngine.resolveCardDraw(connection, {
+            lobbyId,
+            participantId,
+            cardId: card.card_id,
+            username: req.session.user.username
+        });
 
-        // Process Logic Based on Card Type
-        if (card.card_type === 'Empty Card') {
-            const result = await processEmptyCard(connection, participantId, activeEffectId, lobbyId, card.card_id, advanceTurn);
-            Object.assign(responsePayload, result);
-
-        } else if (card.card_type === 'Power Card') {
-            const result = await processPowerCard(connection, participantId, lobbyId, card.card_id, advanceTurn);
-            Object.assign(responsePayload, result);
-
-        } else if (card.card_type === 'Enemy Card') {
-            const result = await processEnemyCard(req, connection, participantId, activeEffectId, lobbyId, card.card_id, advanceTurn, activeLobbyQuestions);
-            Object.assign(responsePayload, result);
+        if (outcome.outcome === 'question_required') {
+            req.session.currentTurn = {
+                cardId: card.card_id,
+                questionId: outcome.question.question_id
+            };
         }
 
         await connection.commit();
-        res.status(200).json(responsePayload);
+        res.status(200).json({ success: true, ...outcome });
 
     } catch (error) {
         await connection.rollback();
@@ -308,61 +280,21 @@ router.post('/api/submit-answer', async (req, res) => {
         }
         
         const participantId = participants[0].participant_id;
-        let activeEffectId = participants[0].active_effect_id;
 
-        // Verify answer
-        const [questions] = await connection.execute(
-            'SELECT correct_option FROM Questions WHERE question_id = ?',
-            [questionId]
-        );
-
-        if (questions.length === 0) {
-            await connection.rollback();
-            return res.status(404).json({ success: false, message: 'Question not found.' });
-        }
-
-        const isCorrect = (questions[0].correct_option === selectedOption);
-        let pointsEarned = 0;
-        let consumedEffectId = null;
-
-        // Calculate points based on assignment rules
-        if (isCorrect) {
-            pointsEarned = 20; 
-            // Check `activeEffectId`
-            if (Number(activeEffectId) === 1) { 
-                pointsEarned *= 2;
-                consumedEffectId = 1;
-                await connection.execute(
-                    'UPDATE Participants SET active_effect_id = NULL WHERE participant_id = ?',
-                    [participantId]
-                );
-            }
-            
-            await connection.execute(
-                'UPDATE Participants SET current_score = current_score + ?, score_updated_at = CURRENT_TIMESTAMP WHERE participant_id = ?',
-                [pointsEarned, participantId]
-            );
-        }
-
-        // Log the turn in GameLog
-        await connection.execute(
-            'INSERT INTO GameLog (lobby_id, participant_id, question_id, card_id, applied_effect_id, points_earned, is_correct) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [lobbyId, participantId, questionId, cardId, consumedEffectId, pointsEarned, isCorrect]
-        );
+        const outcome = await turnEngine.resolveAnswerSubmission(connection, {
+            lobbyId,
+            participantId,
+            questionId,
+            cardId,
+            selectedOption
+        });
 
         // Clear current turn from session (to prevent duplicate submissions)
         req.session.currentTurn = null;
 
-        await advanceTurn(lobbyId, connection); // End turn
-
         await connection.commit();
 
-        res.status(200).json({
-            success: true,
-            isCorrect: isCorrect,
-            pointsEarned: pointsEarned,
-            message: isCorrect ? 'Correct Answer!' : 'Incorrect Answer.'
-        });
+        res.status(200).json(outcome);
 
     } catch (error) {
         await connection.rollback();
@@ -413,7 +345,7 @@ router.get('/api/host-data', async (req, res) => {
             success: true, 
             leaderboard: leaderboard, 
             logs: logs,
-            activeQuestion: activeLobbyQuestions[lobbyId] || null,
+            activeQuestion: turnEngine.getActiveQuestion(lobbyId),
             currentTurnParticipantId: lobbyInfo.length > 0 ? lobbyInfo[0].current_turn_participant_id : null
         });
 
